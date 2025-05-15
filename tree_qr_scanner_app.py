@@ -23,11 +23,11 @@ SHEET_NAME = "TreeQRDatabase"
 
 # Load Google Sheets credentials from Streamlit secrets
 creds_dict = json.loads(st.secrets["CREDS_JSON"])
-creds_file = StringIO(json.dumps(creds_dict))
 
 def get_worksheet():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = ServiceAccountCredentials.from_json_keyfile_name(creds_file, scope)
+    creds_dict = json.loads(st.secrets["CREDS_JSON"])
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     client = gspread.authorize(creds)
     return client.open(SHEET_NAME).sheet1
 
