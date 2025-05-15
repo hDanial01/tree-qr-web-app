@@ -11,6 +11,8 @@ from oauth2client.service_account import ServiceAccountCredentials
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
 import pandas as pd
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
 
 # Setup folders
 IMAGE_DIR = "tree_images"
@@ -18,12 +20,17 @@ EXPORT_DIR = "exports"
 os.makedirs(IMAGE_DIR, exist_ok=True)
 os.makedirs(EXPORT_DIR, exist_ok=True)
 
-# Google Sheets Setup
+# Google Sheets and Drive Setup
 SHEET_NAME = "TreeQRDatabase"
+GOOGLE_DRIVE_FOLDER_ID = "1iddkNU3O1U6bsoHge1m5a-DDZA_NjSVz"
 creds_dict = json.loads(st.secrets["CREDS_JSON"])
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
+
+gauth = GoogleAuth()
+gauth.credentials = creds
+drive = GoogleDrive(gauth)
 
 def get_worksheet():
     return client.open(SHEET_NAME).sheet1
@@ -46,6 +53,15 @@ def save_to_gsheet(entry):
         entry["ID"], entry["Type"], entry["Height"], entry["Canopy"],
         entry["IUCN"], entry["Classification"], entry["CSP"], entry["Image"]
     ])
+    
+def upload_image_to_drive(image_file, filename):
+    with open(filename, "wb") as f:
+        f.write(image_file.read())
+    file_drive = drive.CreateFile({"title": filename, "parents": [{"id": GOOGLE_DRIVE_FOLDER_ID}]})
+    file_drive.SetContentFile(filename)
+    file_drive.Upload()
+    os.remove(filename)
+    return f"https://drive.google.com/uc?id={file_drive['id']}"
 
 # Session state
 if "entries" not in st.session_state:
@@ -94,8 +110,7 @@ with st.form("tree_form"):
             filename = f"{safe_id}{ext}"
             image_path = os.path.join(IMAGE_DIR, filename)
 
-            with open(image_path, "wb") as f:
-                f.write(tree_image.read())
+            image_url = upload_image_to_drive(tree_image, filename)
 
             entry = {
                 "ID": id_val, "Type": tree_type, "Height": height, "Canopy": canopy,
