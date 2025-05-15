@@ -12,6 +12,9 @@ from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
 import pandas as pd
 
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
+
 # Setup folders
 IMAGE_DIR = "tree_images"
 EXPORT_DIR = "exports"
@@ -24,6 +27,25 @@ creds_dict = json.loads(st.secrets["CREDS_JSON"])
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
+
+# Google Drive Setup
+def get_drive():
+    gauth = GoogleAuth()
+    gauth.credentials = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, [
+        "https://www.googleapis.com/auth/drive"
+    ])
+    return GoogleDrive(gauth)
+
+def upload_to_drive(filepath, filename, folder_id):
+    drive = get_drive()
+    file_drive = drive.CreateFile({
+        'title': filename,
+        'parents': [{'id': folder_id}]
+    })
+    file_drive.SetContentFile(filepath)
+    file_drive.Upload()
+
+GOOGLE_DRIVE_FOLDER_ID = "1iddkNU3O1U6bsoHge1m5a-DDZA_NjSVz"  # Replace with your folder ID
 
 def get_worksheet():
     return client.open(SHEET_NAME).sheet1
@@ -97,6 +119,9 @@ with st.form("tree_form"):
             with open(image_path, "wb") as f:
                 f.write(tree_image.read())
 
+            # Upload to Google Drive
+            upload_to_drive(image_path, filename, GOOGLE_DRIVE_FOLDER_ID)
+
             entry = {
                 "ID": id_val, "Type": tree_type, "Height": height, "Canopy": canopy,
                 "IUCN": iucn_status, "Classification": classification, "CSP": csp,
@@ -105,7 +130,7 @@ with st.form("tree_form"):
 
             st.session_state.entries.append(entry)
             save_to_gsheet(entry)
-            st.success("✅ Entry added and image saved!")
+            st.success("✅ Entry added and image uploaded to Google Drive!")
 
 # Display table
 if st.session_state.entries:
