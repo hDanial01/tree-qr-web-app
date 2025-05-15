@@ -66,8 +66,11 @@ if "qr_result" not in st.session_state:
 st.title("🌳 Tree QR Scanner with Google Sheets Database")
 
 # QR toggle button
+if "show_camera" not in st.session_state:
+    st.session_state.show_camera = False
+
 if st.button("📷 Open Camera to Scan QR"):
-    st.session_state.show_camera = not st.session_state.get("show_camera", False)
+    st.session_state.show_camera = True
 
 if st.session_state.get("show_camera", False):
     st.markdown("### Camera Scanner")
