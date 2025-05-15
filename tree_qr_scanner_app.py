@@ -60,8 +60,17 @@ def upload_image_to_drive(image_file, filename):
     file_drive = drive.CreateFile({"title": filename, "parents": [{"id": GOOGLE_DRIVE_FOLDER_ID}]})
     file_drive.SetContentFile(filename)
     file_drive.Upload()
+
+    # Make it publicly accessible
+    file_drive.InsertPermission({
+        'type': 'anyone',
+        'value': 'anyone',
+        'role': 'reader'
+    })
+
     os.remove(filename)
     return f"https://drive.google.com/uc?id={file_drive['id']}"
+
 
 # Session state
 if "entries" not in st.session_state:
@@ -115,7 +124,7 @@ with st.form("tree_form"):
             entry = {
                 "ID": id_val, "Type": tree_type, "Height": height, "Canopy": canopy,
                 "IUCN": iucn_status, "Classification": classification, "CSP": csp,
-                "Image": filename
+                "Image": image_url 
             }
 
             st.session_state.entries.append(entry)
@@ -142,12 +151,10 @@ if st.session_state.entries:
         ws.append(headers)
         for i, entry in enumerate(st.session_state.entries, start=2):
             ws.append([entry[k] for k in headers])
-            img_path = os.path.join(IMAGE_DIR, entry["Image"])
-            if os.path.exists(img_path):
-                img = XLImage(img_path)
-                img.width = img.height = 60
-                img.anchor = f"H{i}"
-                ws.add_image(img)
+            # Insert image URL as hyperlink instead of embedding
+            img_url = entry["Image"]
+            ws.cell(row=i, column=8).value = f'=HYPERLINK("{img_url}", "View Image")'
+
         wb.save(path)
         with open(path, "rb") as f:
             st.download_button("Download Excel File", f, "tree_data.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
