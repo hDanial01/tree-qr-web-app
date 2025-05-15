@@ -1,4 +1,3 @@
-
 import streamlit as st
 import streamlit.components.v1 as components
 from PIL import Image
@@ -66,9 +65,12 @@ if "qr_result" not in st.session_state:
 
 st.title("🌳 Tree QR Scanner with Google Sheets Database")
 
-# QR Scanner Component using postMessage
-def show_qr_scanner():
-    st.markdown("### 📷 Scan QR Code with Camera")
+# QR toggle button
+if st.button("📷 Open Camera to Scan QR"):
+    st.session_state.show_camera = not st.session_state.get("show_camera", False)
+
+if st.session_state.get("show_camera", False):
+    st.markdown("### Camera Scanner")
     components.html(
         f"""
         <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
@@ -81,13 +83,8 @@ def show_qr_scanner():
             fps: 10,
             qrbox: 400,
             aspectRatio: 1.7777778,
-            experimentalFeatures: {{
-                useBarCodeDetectorIfSupported: true
-            }},
             videoConstraints: {{
-                facingMode: "environment",
-                width: {{ ideal: 1280 }},
-                height: {{ ideal: 720 }}
+                facingMode: "environment"
             }}
         }};
         new Html5QrcodeScanner("reader", config).render(onScanSuccess);
@@ -96,9 +93,7 @@ def show_qr_scanner():
         height=380,
     )
 
-show_qr_scanner()
-
-# JavaScript listener for QR scanner messages
+# JS listener to update the QR result
 components.html(
     """
     <script>
