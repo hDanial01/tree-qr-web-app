@@ -1,0 +1,7 @@
+streamlit
+pillow
+pandas
+gspread
+oauth2client
+pyzbar
+openpyxl
