@@ -113,7 +113,7 @@ with st.form("tree_form"):
     canopy = st.text_input("Canopy Diameter (m)")
     iucn_status = st.selectbox("IUCN Status", ["Native", "Non-Native"])
     classification = st.selectbox("Classification", ["Class 1", "Class 2"])
-    csp = st.selectbox("CSP", ["CSP 1", "CSP 2"])
+    csp = st.selectbox("CSP", ["0%~20%", "21%~40%", "41%~60%", "61%~80%", "81%~100%"])
     tree_image = st.file_uploader("Upload Tree Image", type=["jpg", "jpeg", "png"], key="tree")
 
     submitted = st.form_submit_button("Add Entry")
