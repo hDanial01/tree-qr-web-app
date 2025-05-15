@@ -1,5 +1,7 @@
 
 import streamlit as st
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 from PIL import Image
 import pandas as pd
 import os
@@ -7,25 +9,28 @@ import re
 import json
 import cv2
 import numpy as np
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
 
-# Setup directories
-IMAGE_DIR = "tree_images"
-EXPORT_DIR = "exports"
-os.makedirs(IMAGE_DIR, exist_ok=True)
-os.makedirs(EXPORT_DIR, exist_ok=True)
-
-# Google Sheets Setup
+# Constants
 SHEET_NAME = "TreeQRDatabase"
-creds_dict = json.loads(st.secrets["CREDS_JSON"])
+GOOGLE_DRIVE_FOLDER_ID = "1iddkNU3O1U6bsoHge1m5a-DDZA_NjSVz"
 
+# Authenticate with Google APIs
+creds_dict = json.loads(st.secrets["CREDS_JSON"])
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+
+client = gspread.authorize(creds)
+
+gauth = GoogleAuth()
+gauth.credentials = creds
+drive = GoogleDrive(gauth)
+
+# Load entries from Google Sheet
 def get_worksheet():
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-    client = gspread.authorize(creds)
     return client.open(SHEET_NAME).sheet1
 
 def load_entries_from_gsheet():
@@ -47,41 +52,49 @@ def save_to_gsheet(entry):
         entry["IUCN"], entry["Classification"], entry["CSP"], entry["Image"]
     ])
 
+def upload_image_to_drive(image_file, filename):
+    with open(filename, "wb") as f:
+        f.write(image_file.read())
+    file_drive = drive.CreateFile({"title": filename, "parents": [{"id": GOOGLE_DRIVE_FOLDER_ID}]})
+    file_drive.SetContentFile(filename)
+    file_drive.Upload()
+    os.remove(filename)
+    return f"https://drive.google.com/uc?id={file_drive['id']}"
+
+# QR decoding
 def decode_qr_image(uploaded_file):
     try:
         image = Image.open(uploaded_file).convert('RGB')
-        st.image(image, caption="Captured QR Image", use_column_width=True)
+        st.image(image, caption="QR Image", use_column_width=True)
         img_np = np.array(image)
         img_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
         detector = cv2.QRCodeDetector()
-        data, bbox, _ = detector.detectAndDecode(img_bgr)
+        data, _, _ = detector.detectAndDecode(img_bgr)
         return data
-    except Exception as e:
-        st.error(f"Error decoding QR: {e}")
+    except:
         return ""
 
-# Initialize state
+# Session state init
 if "entries" not in st.session_state:
     st.session_state.entries = load_entries_from_gsheet()
 if "qr_result" not in st.session_state:
     st.session_state.qr_result = ""
 
-st.title("🌳 GAMUDA Tree QR Web App")
+st.title("🌳 Tree QR Web App")
 
-# QR Image Capture
-st.header("1. Capture or Upload QR Code Image")
-qr_image = st.file_uploader("📷 Take or Upload a QR Code Image", type=["png", "jpg", "jpeg"], key="qr-upload")
-
+# QR Upload
+st.header("1. Upload QR Image")
+qr_image = st.file_uploader("📷 Upload QR Code Image", type=["jpg", "jpeg", "png"])
 if qr_image:
-    decoded_qr = decode_qr_image(qr_image)
-    if decoded_qr:
-        st.success(f"✅ QR Code Detected: {decoded_qr}")
-        st.session_state.qr_result = decoded_qr
+    result = decode_qr_image(qr_image)
+    if result:
+        st.session_state.qr_result = result
+        st.success(f"QR Detected: {result}")
     else:
-        st.error("❌ No QR code found in the image.")
+        st.error("No QR code detected.")
 
-# Data Entry
-st.header("2. Fill Tree Details")
+# Form
+st.header("2. Enter Tree Details")
 with st.form("tree_form"):
     id_val = st.text_input("Tree ID", value=st.session_state.qr_result)
     tree_type = st.selectbox("Tree Type", ["Tree 1", "Tree 2", "Tree 3", "Tree 4", "Tree 5"])
@@ -99,48 +112,21 @@ with st.form("tree_form"):
         else:
             safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', id_val)
             _, ext = os.path.splitext(tree_image.name)
-            new_filename = f"{safe_id}{ext}"
-            image_path = os.path.join(IMAGE_DIR, new_filename)
-
-            with open(image_path, "wb") as f:
-                f.write(tree_image.read())
+            filename = f"{safe_id}{ext}"
+            image_url = upload_image_to_drive(tree_image, filename)
 
             entry = {
                 "ID": id_val, "Type": tree_type, "Height": height, "Canopy": canopy,
-                "IUCN": iucn_status, "Classification": classification, "CSP": csp, "Image": new_filename
+                "IUCN": iucn_status, "Classification": classification, "CSP": csp,
+                "Image": image_url
             }
 
             st.session_state.entries.append(entry)
             save_to_gsheet(entry)
-            st.success(f"✅ Entry saved! Image: {new_filename}")
-            st.session_state.qr_result = ""
+            st.success("Entry added and image uploaded to Google Drive!")
 
-# Display Table
+# Table
 if st.session_state.entries:
     st.header("3. Current Entries")
     df = pd.DataFrame(st.session_state.entries)
     st.dataframe(df)
-
-# Export Options
-if st.session_state.entries:
-    st.header("4. Export Data")
-    csv_data = pd.DataFrame(st.session_state.entries).to_csv(index=False).encode("utf-8")
-    st.download_button("Download CSV", csv_data, "tree_data.csv", "text/csv")
-
-    if st.button("Download Excel with Images"):
-        path = os.path.join(EXPORT_DIR, "tree_data.xlsx")
-        wb = Workbook()
-        ws = wb.active
-        headers = ["ID", "Type", "Height", "Canopy", "IUCN", "Classification", "CSP", "Image"]
-        ws.append(headers)
-        for i, entry in enumerate(st.session_state.entries, start=2):
-            ws.append([entry[k] for k in headers])
-            img_path = os.path.join(IMAGE_DIR, entry["Image"])
-            if os.path.exists(img_path):
-                img = XLImage(img_path)
-                img.width = img.height = 60
-                img.anchor = f"H{i}"
-                ws.add_image(img)
-        wb.save(path)
-        with open(path, "rb") as f:
-            st.download_button("Download Excel File", f, "tree_data.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
