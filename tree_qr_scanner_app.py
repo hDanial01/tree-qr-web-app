@@ -1,3 +1,4 @@
+
 import streamlit as st
 import streamlit.components.v1 as components
 from PIL import Image
@@ -5,7 +6,6 @@ import pandas as pd
 import os
 import re
 import json
-from io import StringIO
 
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -26,7 +26,6 @@ creds_dict = json.loads(st.secrets["CREDS_JSON"])
 
 def get_worksheet():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds_dict = json.loads(st.secrets["CREDS_JSON"])
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     client = gspread.authorize(creds)
     return client.open(SHEET_NAME).sheet1
@@ -62,52 +61,68 @@ def save_to_gsheet(entry):
 if "entries" not in st.session_state:
     st.session_state.entries = load_entries_from_gsheet()
 
+if "qr_result" not in st.session_state:
+    st.session_state.qr_result = ""
+
 st.title("🌳 Tree QR Scanner with Google Sheets Database")
 
-# QR Scanner Component
+# QR Scanner Component using postMessage
 def show_qr_scanner():
     st.markdown("### 📷 Scan QR Code with Camera")
     components.html(
-        """
+        f"""
         <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
         <div id="reader" style="width: 400px;"></div>
         <script>
-        function onScanSuccess(decodedText, decodedResult) {
-            const input = window.parent.document.querySelector('input[data-testid="qr-result"]');
-            const event = new Event("input", { bubbles: true });
-            input.value = decodedText;
-            input.dispatchEvent(event);
-        }
-
-        const config = {
+        function onScanSuccess(decodedText, decodedResult) {{
+            window.parent.postMessage({{ type: 'qr_scanned', data: decodedText }}, '*');
+        }}
+        const config = {{
             fps: 10,
             qrbox: 400,
             aspectRatio: 1.7777778,
-            experimentalFeatures: {
+            experimentalFeatures: {{
                 useBarCodeDetectorIfSupported: true
-            },
-            videoConstraints: {
+            }},
+            videoConstraints: {{
                 facingMode: "environment",
-                width: { ideal: 1280 },
-                height: { ideal: 720 }
-            }
-        };
-
+                width: {{ ideal: 1280 }},
+                height: {{ ideal: 720 }}
+            }}
+        }};
         new Html5QrcodeScanner("reader", config).render(onScanSuccess);
         </script>
         """,
-        height=360,
+        height=380,
     )
 
-# QR Section
-st.header("1. Scan QR Code")
 show_qr_scanner()
-qr_text = st.text_input("Scanned QR Result", key="qr-result")
+
+# JavaScript listener for QR scanner messages
+components.html(
+    """
+    <script>
+    window.addEventListener("message", (event) => {
+        if (event.data.type === "qr_scanned") {
+            const input = window.parent.document.querySelector('input[id$="qr-result"]');
+            if (input) {
+                input.value = event.data.data;
+                input.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+        }
+    });
+    </script>
+    """,
+    height=0
+)
+
+# QR Result Input
+qr_input = st.text_input("Scanned QR Result", value=st.session_state.qr_result, key="qr-result")
 
 # Data Entry Form
 st.header("2. Fill Tree Details")
 with st.form("tree_form"):
-    id_val = st.text_input("Tree ID", value=qr_text, key="tree-id")
+    id_val = st.text_input("Tree ID", value=qr_input, key="tree-id")
     tree_type = st.selectbox("Tree Type", ["Tree 1", "Tree 2", "Tree 3", "Tree 4", "Tree 5"])
     height = st.text_input("Height (m)")
     canopy = st.text_input("Canopy Diameter (m)")
@@ -144,6 +159,7 @@ with st.form("tree_form"):
             st.session_state.entries.append(entry)
             save_to_gsheet(entry)
             st.success(f"✅ Entry added and saved to Google Sheet! Image: {new_filename}")
+            st.session_state.qr_result = ""
 
 # Display Table
 if st.session_state.entries:
@@ -154,7 +170,6 @@ if st.session_state.entries:
 # Export
 if st.session_state.entries:
     st.header("4. Export Data")
-
     csv_data = pd.DataFrame(st.session_state.entries).to_csv(index=False).encode("utf-8")
     st.download_button("Download CSV", csv_data, "tree_data.csv", "text/csv")
 
