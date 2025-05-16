@@ -112,24 +112,35 @@ with st.form("tree_form"):
     submitted = st.form_submit_button("Add Entry")
     if submitted:
         if not all([id_val, tree_type, height, canopy, iucn_status, classification, csp, tree_image]):
-            st.error("Please complete all fields.")
+            st.error("❌ Please complete all fields.")
         else:
-            safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', id_val)
-            _, ext = os.path.splitext(tree_image.name)
-            filename = f"{safe_id}{ext}"
-            image_path = os.path.join(IMAGE_DIR, filename)
+            # Check for duplicate ID
+            existing_ids = [entry["ID"] for entry in st.session_state.entries]
+            if id_val in existing_ids:
+                st.error("🚫 A tree with this ID already exists. Please enter a unique Tree ID.")
+            else:
+                safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', id_val)
+                _, ext = os.path.splitext(tree_image.name)
+                filename = f"{safe_id}{ext}"
+                image_path = os.path.join(IMAGE_DIR, filename)
 
-            image_url = upload_image_to_drive(tree_image, filename)
+                image_url = upload_image_to_drive(tree_image, filename)
 
-            entry = {
-                "ID": id_val, "Type": tree_type, "Height": height, "Canopy": canopy,
-                "IUCN": iucn_status, "Classification": classification, "CSP": csp,
-                "Image": image_url 
-            }
+                entry = {
+                    "ID": id_val,
+                    "Type": tree_type,
+                    "Height": height,
+                    "Canopy": canopy,
+                    "IUCN": iucn_status,
+                    "Classification": classification,
+                    "CSP": csp,
+                    "Image": image_url
+                 }
 
-            st.session_state.entries.append(entry)
-            save_to_gsheet(entry)
-            st.success("✅ Entry added and image saved!")
+                st.session_state.entries.append(entry)
+                save_to_gsheet(entry)
+                st.success("✅ Entry added and image saved!")
+
 
 # Display table
 if st.session_state.entries:
