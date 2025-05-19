@@ -101,11 +101,11 @@ if captured:
 st.header("2. Fill Tree Details")
 with st.form("tree_form"):
     id_val = st.text_input("Tree ID", value=st.session_state.qr_result)
-    tree_type = st.selectbox("Tree Type", ["Tree 1", "Tree 2", "Tree 3", "Tree 4", "Tree 5"])
-    height = st.text_input("Height (m)")
-    canopy = st.text_input("Canopy Diameter (m)")
-    iucn_status = st.selectbox("IUCN Status", ["Native", "Non-Native"])
-    classification = st.selectbox("Classification", ["Class 1", "Class 2"])
+    tree_type = st.selectbox("Tree Type", ["A - Hibiscus/Hibiscus rosa-sinensis", "B -  Rubber tree/Hevea brasiliensis", "C - Mango tree/Mangifera indica", "D - Jackfruit tree/Artocarpus heterophyllus", "E - Merbau/Intsia palembanica"])
+    height = st.text_input("Height (cm)")
+    canopy = st.text_input("Canopy Diameter (cm)")
+    iucn_status = st.selectbox("IUCN Status", ["Not Evaluated", "Data Deficient", "Least Concern", "Near Threatened", "Vulnerable", "Endangered", "Critically Endangered", "Extinct in the Wild", "Extinct"])
+    classification = st.selectbox("Classification", ["Native", "Non-native"])
     csp = st.selectbox("CSP", ["0%~20%", "21%~40%", "41%~60%", "61%~80%", "81%~100%"])
     tree_image = st.file_uploader("Upload Tree Image", type=["jpg", "jpeg", "png"], key="tree")
 
