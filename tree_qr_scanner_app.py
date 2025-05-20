@@ -52,21 +52,18 @@ def save_to_gsheet(entry):
         entry["ID"], entry["Type"], entry["Height"], entry["Canopy"],
         entry["IUCN"], entry["Classification"], entry["CSP"], entry["Image"]
     ])
-    
+
 def upload_image_to_drive(image_file, filename):
     with open(filename, "wb") as f:
         f.write(image_file.read())
     file_drive = drive.CreateFile({"title": filename, "parents": [{"id": GOOGLE_DRIVE_FOLDER_ID}]})
     file_drive.SetContentFile(filename)
     file_drive.Upload()
-
-    # Make it publicly accessible
     file_drive.InsertPermission({
         'type': 'anyone',
         'value': 'anyone',
         'role': 'reader'
     })
-
     os.remove(filename)
     return f"https://drive.google.com/uc?id={file_drive['id']}"
 
@@ -75,6 +72,8 @@ if "entries" not in st.session_state:
     st.session_state.entries = load_entries_from_gsheet()
 if "qr_result" not in st.session_state:
     st.session_state.qr_result = ""
+if "qr_status" not in st.session_state:
+    st.session_state.qr_status = None  # "unique", "duplicate", or None
 
 st.title("🌳 Tree QR Scanner")
 
@@ -85,22 +84,28 @@ captured = st.camera_input("📸 Take a photo of the QR code")
 if captured:
     file_bytes = np.asarray(bytearray(captured.read()), dtype=np.uint8)
     img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-
     detector = cv2.QRCodeDetector()
     data, bbox, _ = detector.detectAndDecode(img)
 
     if data:
+        data = data.strip()
         st.session_state.qr_result = data
         existing_ids = [entry["ID"].lower() for entry in st.session_state.entries]
-
         if data.lower() in existing_ids:
-            st.error(f"🚫 QR Code ID '{data}' already exists in the system.")
+            st.session_state.qr_status = "duplicate"
         else:
-            st.success(f"✅ QR Code Found: {data} (ID is unique)")
+            st.session_state.qr_status = "unique"
     else:
         st.error("❌ No QR code detected.")
 
-# Tree data entry
+# Persistent message after scan
+if st.session_state.qr_result:
+    if st.session_state.qr_status == "duplicate":
+        st.error(f"🚫 QR Code ID '{st.session_state.qr_result}' already exists in the system.")
+    elif st.session_state.qr_status == "unique":
+        st.success(f"✅ QR Code Found: {st.session_state.qr_result} (ID is unique)")
+
+# Tree data entry form (only if QR is unique)
 existing_ids = [entry["ID"].lower() for entry in st.session_state.entries]
 qr_id = st.session_state.qr_result.lower() if st.session_state.qr_result else ""
 
@@ -121,18 +126,13 @@ if qr_id and qr_id not in existing_ids:
             if not all([id_val, tree_type, height, canopy, iucn_status, classification, csp, tree_image]):
                 st.error("❌ Please complete all fields.")
             else:
-                # Case-insensitive duplicate check
-                existing_ids = [entry["ID"].lower() for entry in st.session_state.entries]
-                if id_val.lower() in existing_ids:
+                if id_val.lower() in [entry["ID"].lower() for entry in st.session_state.entries]:
                     st.error("🚫 A tree with this ID already exists. Please enter a unique Tree ID.")
                 else:
                     safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', id_val)
                     _, ext = os.path.splitext(tree_image.name)
                     filename = f"{safe_id}{ext}"
-                    image_path = os.path.join(IMAGE_DIR, filename)
-
                     image_url = upload_image_to_drive(tree_image, filename)
-
                     entry = {
                         "ID": id_val,
                         "Type": tree_type,
@@ -143,12 +143,14 @@ if qr_id and qr_id not in existing_ids:
                         "CSP": csp,
                         "Image": image_url
                     }
-
                     st.session_state.entries.append(entry)
                     save_to_gsheet(entry)
                     st.success("✅ Entry added and image saved!")
 else:
-    st.info("📷 Scan a unique QR code to enable the data entry form.")
+    if st.session_state.qr_result:
+        st.info("📷 Scan a different QR code to enter new tree data.")
+    else:
+        st.info("📷 Please scan a QR code to begin.")
 
 # Display table
 if st.session_state.entries:
@@ -170,10 +172,8 @@ if st.session_state.entries:
         ws.append(headers)
         for i, entry in enumerate(st.session_state.entries, start=2):
             ws.append([entry[k] for k in headers])
-            # Insert image URL as hyperlink instead of embedding
             img_url = entry["Image"]
             ws.cell(row=i, column=8).value = f'=HYPERLINK("{img_url}", "View Image")'
-
         wb.save(path)
         with open(path, "rb") as f:
             st.download_button("Download Excel File", f, "tree_data.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
