@@ -96,9 +96,10 @@ st.session_state.iframe_mode = iframe_check
 if iframe_check:
     st.warning("⚠️ This app is running inside another website or app (iframe mode). GPS features may not work.")
     st.markdown(
-        '[🔗 Click here to open in a new tab and enable GPS](https://tree-qr-web-app-fzfpztpi2uljavupjh4zde.streamlit.app)',
+        '<a href="https://tree-qr-web-app-fzfpztpi2uljavupjh4zde.streamlit.app" target="_blank" style="font-size:18px;">🔗 Click here to open in a new tab and enable GPS</a>',
         unsafe_allow_html=True
     )
+
 else:
     st.success("✅ Fullscreen mode detected. GPS should work normally.")
 
