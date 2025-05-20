@@ -12,7 +12,7 @@ from openpyxl.drawing.image import Image as XLImage
 import pandas as pd
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
-from streamlit_js_eval import streamlit_js_eval  # NEW for GPS
+from streamlit_js_eval import streamlit_js_eval  # For GPS
 
 # Setup folders
 IMAGE_DIR = "tree_images"
@@ -105,7 +105,7 @@ if captured:
     else:
         st.error("❌ No QR code detected.")
 
-# 2. QR Status & GPS
+# 2. QR Status and GPS
 if st.session_state.qr_result:
     st.header("2. QR Code Status and GPS Location")
 
@@ -114,32 +114,29 @@ if st.session_state.qr_result:
     elif st.session_state.qr_status == "unique":
         st.success(f"✅ QR Code Found: {st.session_state.qr_result} (ID is unique)")
 
+        # Show current GPS if already recorded
+        if st.session_state.coords:
+            lat = st.session_state.coords.get("latitude", "")
+            lon = st.session_state.coords.get("longitude", "")
+            st.info(f"📍 Current Location: **Lat:** {lat}, **Long:** {lon}")
+
         if st.button("📍 Get Location"):
             try:
-                coords = streamlit_js_eval(
-                    js_expressions='navigator.geolocation.getCurrentPosition((pos) => pos.coords)',
+                pos = streamlit_js_eval(
+                    js_expressions='new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject))',
                     key="get_coords"
                 )
-                if coords and "latitude" in coords:
-                    st.session_state.coords = coords
-                    st.success(f"📍 Location captured: {coords['latitude']}, {coords['longitude']}")
+                if pos and "coords" in pos:
+                    lat = pos["coords"]["latitude"]
+                    lon = pos["coords"]["longitude"]
+                    st.session_state.coords = {"latitude": lat, "longitude": lon}
+                    st.success(f"📍 Location captured: {lat}, {lon}")
                 else:
-                    st.warning("⚠️ GPS request sent but no location returned. Try again or use manual input.")
+                    st.warning("⚠️ GPS request sent but no location returned. Try again.")
             except Exception as e:
                 st.error(f"📍 GPS error: {e}")
 
-        if st.session_state.coords:
-            st.markdown(f"**Latitude:** {st.session_state.coords.get('latitude', '')}")
-            st.markdown(f"**Longitude:** {st.session_state.coords.get('longitude', '')}")
-        else:
-            st.info("📍 If location isn't captured, enter manually below.")
-            manual_lat = st.text_input("Latitude (manual)")
-            manual_lon = st.text_input("Longitude (manual)")
-            if manual_lat and manual_lon:
-                st.session_state.coords = {"latitude": manual_lat, "longitude": manual_lon}
-                st.success("📍 Manual coordinates saved.")
-
-# 3. Form
+# 3. Fill Tree Details
 existing_ids = [entry["ID"].lower() for entry in st.session_state.entries]
 qr_id = st.session_state.qr_result.lower() if st.session_state.qr_result else ""
 
@@ -182,7 +179,7 @@ if qr_id and qr_id not in existing_ids:
                 save_to_gsheet(entry)
                 st.success("✅ Entry added and image saved!")
 
-# 4. Table
+# 4. Current Entries
 if st.session_state.entries:
     st.header("4. Current Entries")
     df = pd.DataFrame(st.session_state.entries)
