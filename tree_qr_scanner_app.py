@@ -8,24 +8,22 @@ import json
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from openpyxl import Workbook
-from openpyxl.drawing.image import Image as XLImage
 import pandas as pd
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
-from bokeh.models.widgets import Button
-from bokeh.models import CustomJS
+from bokeh.models import Button, CustomJS
 from streamlit_bokeh_events import streamlit_bokeh_events
 
-# 🔐 Load credentials from environment variable on Render
+# Load credentials
 creds_dict = json.loads(os.environ["CREDS_JSON"])
 
-# Setup folders
+# Directories
 IMAGE_DIR = "tree_images"
 EXPORT_DIR = "exports"
 os.makedirs(IMAGE_DIR, exist_ok=True)
 os.makedirs(EXPORT_DIR, exist_ok=True)
 
-# Google Sheets and Drive Setup
+# Google Sheets + Drive setup
 SHEET_NAME = "TreeQRDatabase"
 GOOGLE_DRIVE_FOLDER_ID = "1iddkNU3O1U6bsoHge1m5a-DDZA_NjSVz"
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -71,11 +69,7 @@ def upload_image_to_drive(image_file, filename):
     file_drive = drive.CreateFile({"title": filename, "parents": [{"id": GOOGLE_DRIVE_FOLDER_ID}]})
     file_drive.SetContentFile(filename)
     file_drive.Upload()
-    file_drive.InsertPermission({
-        'type': 'anyone',
-        'value': 'anyone',
-        'role': 'reader'
-    })
+    file_drive.InsertPermission({'type': 'anyone', 'value': 'anyone', 'role': 'reader'})
     os.remove(filename)
     return f"https://drive.google.com/uc?id={file_drive['id']}"
 
@@ -91,8 +85,8 @@ if "coords" not in st.session_state:
 
 st.title("🌳 Tree QR Scanner")
 
-# 1. QR Code Scan
-st.header("1. Capture QR Code (Camera Input)")
+# 1. QR Code Scanner
+st.header("1. Capture QR Code")
 captured = st.camera_input("📸 Take a photo of the QR code")
 
 if captured:
@@ -104,22 +98,22 @@ if captured:
     if data:
         data = data.strip()
         st.session_state.qr_result = data
-        st.session_state.coords = {}  # Clear GPS
+        st.session_state.coords = {}
         existing_ids = [entry["ID"].lower() for entry in st.session_state.entries]
         st.session_state.qr_status = "duplicate" if data.lower() in existing_ids else "unique"
     else:
         st.error("❌ No QR code detected.")
 
-# 2. QR Result + Get Location
+# 2. QR Result and Get Location
 if st.session_state.qr_result:
     st.header("2. QR Code Status and GPS Location")
 
     if st.session_state.qr_status == "duplicate":
         st.error(f"🚫 QR Code ID '{st.session_state.qr_result}' already exists.")
-    elif st.session_state.qr_status == "unique":
+    else:
         st.success(f"✅ QR Code Found: {st.session_state.qr_result} (ID is unique)")
 
-        # Bokeh Button with safer JS
+        # Button and JS
         loc_button = Button(label="📍 Get Location")
         loc_button.js_on_event("button_click", CustomJS(code="""
             console.log("Attempting to get location...");
@@ -141,11 +135,7 @@ if st.session_state.qr_result:
                     (error) => {
                         console.log("Location error:", error.message);
                         document.dispatchEvent(new CustomEvent("GET_LOCATION", {
-                            detail: {
-                                lat: null,
-                                lon: null,
-                                error: error.message
-                            }
+                            detail: { lat: null, lon: null, error: error.message }
                         }));
                     },
                     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
@@ -153,6 +143,7 @@ if st.session_state.qr_result:
             }
         """))
 
+        # Display button and listen for event
         result = streamlit_bokeh_events(
             loc_button,
             events="GET_LOCATION",
@@ -162,9 +153,8 @@ if st.session_state.qr_result:
             override_height=75
         )
 
-
         if result and "GET_LOCATION" in result:
-            st.json(result)  # Show full event data
+            st.json(result)  # for debugging
             lat = result["GET_LOCATION"].get("lat")
             lon = result["GET_LOCATION"].get("lon")
             error = result["GET_LOCATION"].get("error")
@@ -173,12 +163,9 @@ if st.session_state.qr_result:
                 st.session_state.coords = {"latitude": lat, "longitude": lon}
                 st.success(f"📍 Location captured:\nLat: **{lat}**, Lon: **{lon}**")
             elif error:
-                st.error(f"⚠️ GPS error: {error}")
-            else:
-                st.error("⚠️ Unknown location error.")
-
+                st.error(f"⚠️ Location error: {error}")
         elif st.session_state.coords:
-            st.info(f"📍 Stored Location:\nLat: **{st.session_state.coords.get('latitude')}**, Lon: **{st.session_state.coords.get('longitude')}**")
+            st.info(f"📍 Stored Location:\nLat: **{st.session_state.coords['latitude']}**, Lon: **{st.session_state.coords['longitude']}**")
 
 # 3. Tree Details Form
 existing_ids = [entry["ID"].lower() for entry in st.session_state.entries]
@@ -203,7 +190,7 @@ if qr_id and qr_id not in existing_ids:
         ])
         classification = st.selectbox("Classification", ["Native", "Non-native"])
         csp = st.selectbox("CSP", ["0%~20%", "21%~40%", "41%~60%", "61%~80%", "81%~100%"])
-        tree_image = st.file_uploader("Upload Tree Image", type=["jpg", "jpeg", "png"], key="tree")
+        tree_image = st.file_uploader("Upload Tree Image", type=["jpg", "jpeg", "png"])
 
         submitted = st.form_submit_button("Add Entry")
         if submitted:
