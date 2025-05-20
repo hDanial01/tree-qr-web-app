@@ -1,11 +1,11 @@
 import streamlit as st
 import cv2
 import numpy as np
-from PIL import Image
 import os
 import re
 import json
 import gspread
+from PIL import Image
 from oauth2client.service_account import ServiceAccountCredentials
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
@@ -94,9 +94,13 @@ iframe_check = streamlit_js_eval(js_expressions="window.self !== window.top", ke
 st.session_state.iframe_mode = iframe_check
 
 if iframe_check:
-    st.warning("⚠️ The app is running inside an iframe. GPS features may not work. Open in a new browser tab for best results.")
+    st.warning("⚠️ This app is running inside another website or app (iframe mode). GPS features may not work.")
+    st.markdown(
+        '[🔗 Click here to open in a new tab and enable GPS](https://tree-qr-web-app-fzfpztpi2uljavupjh4zde.streamlit.app)',
+        unsafe_allow_html=True
+    )
 else:
-    st.success("✅ Full screen mode detected. GPS should work as expected.")
+    st.success("✅ Fullscreen mode detected. GPS should work normally.")
 
 # 1. Capture QR Code
 st.header("1. Capture QR Code (Camera Input)")
@@ -125,7 +129,6 @@ if st.session_state.qr_result:
     elif st.session_state.qr_status == "unique":
         st.success(f"✅ QR Code Found: {st.session_state.qr_result} (ID is unique)")
 
-        # Show current GPS if already recorded
         if st.session_state.coords:
             lat = st.session_state.coords.get("latitude", "")
             lon = st.session_state.coords.get("longitude", "")
@@ -149,7 +152,7 @@ if st.session_state.qr_result:
                 except Exception as e:
                     st.error(f"📍 GPS error: {e}")
         else:
-            st.info("📍 GPS is disabled in iframe mode.")
+            st.info("📍 GPS is disabled in iframe mode. [Open app in new tab](https://tree-qr-web-app-fzfpztpi2uljavupjh4zde.streamlit.app) to enable.", unsafe_allow_html=True)
 
 # 3. Fill Tree Details
 existing_ids = [entry["ID"].lower() for entry in st.session_state.entries]
