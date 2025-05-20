@@ -8,24 +8,22 @@ import json
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from openpyxl import Workbook
+from openpyxl.drawing.image import Image as XLImage
 import pandas as pd
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
-from bokeh.models import Button, CustomJS
-from streamlit_bokeh_events import streamlit_bokeh_events
+from streamlit_js_eval import streamlit_js_eval  # NEW for GPS
 
-# Load credentials
-creds_dict = json.loads(os.environ["CREDS_JSON"])
-
-# Directories
+# Setup folders
 IMAGE_DIR = "tree_images"
 EXPORT_DIR = "exports"
 os.makedirs(IMAGE_DIR, exist_ok=True)
 os.makedirs(EXPORT_DIR, exist_ok=True)
 
-# Google Sheets + Drive setup
+# Google Sheets and Drive Setup
 SHEET_NAME = "TreeQRDatabase"
 GOOGLE_DRIVE_FOLDER_ID = "1iddkNU3O1U6bsoHge1m5a-DDZA_NjSVz"
+creds_dict = json.loads(st.secrets["CREDS_JSON"])
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
@@ -69,7 +67,11 @@ def upload_image_to_drive(image_file, filename):
     file_drive = drive.CreateFile({"title": filename, "parents": [{"id": GOOGLE_DRIVE_FOLDER_ID}]})
     file_drive.SetContentFile(filename)
     file_drive.Upload()
-    file_drive.InsertPermission({'type': 'anyone', 'value': 'anyone', 'role': 'reader'})
+    file_drive.InsertPermission({
+        'type': 'anyone',
+        'value': 'anyone',
+        'role': 'reader'
+    })
     os.remove(filename)
     return f"https://drive.google.com/uc?id={file_drive['id']}"
 
@@ -85,8 +87,8 @@ if "coords" not in st.session_state:
 
 st.title("🌳 Tree QR Scanner")
 
-# 1. QR Code Scanner
-st.header("1. Capture QR Code")
+# 1. Capture QR Code
+st.header("1. Capture QR Code (Camera Input)")
 captured = st.camera_input("📸 Take a photo of the QR code")
 
 if captured:
@@ -98,110 +100,72 @@ if captured:
     if data:
         data = data.strip()
         st.session_state.qr_result = data
-        st.session_state.coords = {}
         existing_ids = [entry["ID"].lower() for entry in st.session_state.entries]
         st.session_state.qr_status = "duplicate" if data.lower() in existing_ids else "unique"
     else:
         st.error("❌ No QR code detected.")
 
-# 2. QR Result
+# 2. QR Status & GPS
 if st.session_state.qr_result:
-    st.header("2. QR Code Status")
+    st.header("2. QR Code Status and GPS Location")
+
     if st.session_state.qr_status == "duplicate":
-        st.error(f"🚫 QR Code ID '{st.session_state.qr_result}' already exists.")
+        st.error(f"🚫 QR Code ID '{st.session_state.qr_result}' already exists in the system.")
     elif st.session_state.qr_status == "unique":
         st.success(f"✅ QR Code Found: {st.session_state.qr_result} (ID is unique)")
 
-# 3. Get Location if Unique
-if st.session_state.qr_status == "unique":
-    st.subheader("📍 Get Tree Location")
+        if st.button("📍 Get Location"):
+            try:
+                coords = streamlit_js_eval(
+                    js_expressions='navigator.geolocation.getCurrentPosition((pos) => pos.coords)',
+                    key="get_coords"
+                )
+                if coords and "latitude" in coords:
+                    st.session_state.coords = coords
+                    st.success(f"📍 Location captured: {coords['latitude']}, {coords['longitude']}")
+                else:
+                    st.warning("⚠️ GPS request sent but no location returned. Try again or use manual input.")
+            except Exception as e:
+                st.error(f"📍 GPS error: {e}")
 
-    loc_button = Button(label="📍 Get Location")
-    loc_button.js_on_event("button_click", CustomJS(code="""
-        console.log("Attempting to get location...");
-        if (!navigator.geolocation) {
-            document.dispatchEvent(new CustomEvent("GET_LOCATION", {
-                detail: { lat: null, lon: null, error: "Geolocation not supported" }
-            }));
-        } else {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    document.dispatchEvent(new CustomEvent("GET_LOCATION", {
-                        detail: {
-                            lat: position.coords.latitude,
-                            lon: position.coords.longitude
-                        }
-                    }));
-                },
-                (error) => {
-                    document.dispatchEvent(new CustomEvent("GET_LOCATION", {
-                        detail: { lat: null, lon: null, error: error.message }
-                    }));
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-            );
-        }
-    """))
+        if st.session_state.coords:
+            st.markdown(f"**Latitude:** {st.session_state.coords.get('latitude', '')}")
+            st.markdown(f"**Longitude:** {st.session_state.coords.get('longitude', '')}")
+        else:
+            st.info("📍 If location isn't captured, enter manually below.")
+            manual_lat = st.text_input("Latitude (manual)")
+            manual_lon = st.text_input("Longitude (manual)")
+            if manual_lat and manual_lon:
+                st.session_state.coords = {"latitude": manual_lat, "longitude": manual_lon}
+                st.success("📍 Manual coordinates saved.")
 
-    result = streamlit_bokeh_events(
-        loc_button,
-        events="GET_LOCATION",
-        key=f"get_location_{st.session_state.qr_result or 'default'}",
-        refresh_on_update=False,
-        debounce_time=0,
-        override_height=75
-    )
-
-    if result and "GET_LOCATION" in result:
-        lat = result["GET_LOCATION"].get("lat")
-        lon = result["GET_LOCATION"].get("lon")
-        error = result["GET_LOCATION"].get("error")
-
-        if lat is not None and lon is not None:
-            st.session_state.coords = {"latitude": lat, "longitude": lon}
-            st.success(f"📍 Location captured:\nLat: **{lat}**, Lon: **{lon}**")
-        elif error:
-            st.error(f"⚠️ Location error: {error}")
-    elif st.session_state.coords:
-        st.info(f"📍 Stored Location:\nLat: **{st.session_state.coords['latitude']}**, Lon: **{st.session_state.coords['longitude']}**")
-
-# 4. Tree Form
+# 3. Form
 existing_ids = [entry["ID"].lower() for entry in st.session_state.entries]
 qr_id = st.session_state.qr_result.lower() if st.session_state.qr_result else ""
 
 if qr_id and qr_id not in existing_ids:
-    st.header("4. Fill Tree Details")
+    st.header("3. Fill Tree Details")
     with st.form("tree_form"):
         id_val = st.text_input("Tree ID", value=st.session_state.qr_result)
-        tree_type = st.selectbox("Tree Type", [
-            "A - Hibiscus/Hibiscus rosa-sinensis",
-            "B - Rubber tree/Hevea brasiliensis",
-            "C - Mango tree/Mangifera indica",
-            "D - Jackfruit tree/Artocarpus heterophyllus",
-            "E - Merbau/Intsia palembanica"
-        ])
+        tree_type = st.selectbox("Tree Type", ["A - Hibiscus/Hibiscus rosa-sinensis", "B -  Rubber tree/Hevea brasiliensis", "C - Mango tree/Mangifera indica", "D - Jackfruit tree/Artocarpus heterophyllus", "E - Merbau/Intsia palembanica"])
         height = st.text_input("Height (cm)")
         canopy = st.text_input("Canopy Diameter (cm)")
-        iucn_status = st.selectbox("IUCN Status", [
-            "Not Evaluated", "Data Deficient", "Least Concern", "Near Threatened",
-            "Vulnerable", "Endangered", "Critically Endangered", "Extinct in the Wild", "Extinct"
-        ])
+        iucn_status = st.selectbox("IUCN Status", ["Not Evaluated", "Data Deficient", "Least Concern", "Near Threatened", "Vulnerable", "Endangered", "Critically Endangered", "Extinct in the Wild", "Extinct"])
         classification = st.selectbox("Classification", ["Native", "Non-native"])
         csp = st.selectbox("CSP", ["0%~20%", "21%~40%", "41%~60%", "61%~80%", "81%~100%"])
-        tree_image = st.file_uploader("Upload Tree Image", type=["jpg", "jpeg", "png"])
+        tree_image = st.file_uploader("Upload Tree Image", type=["jpg", "jpeg", "png"], key="tree")
 
         submitted = st.form_submit_button("Add Entry")
         if submitted:
             if not all([id_val, tree_type, height, canopy, iucn_status, classification, csp, tree_image]):
                 st.error("❌ Please complete all fields.")
-            elif id_val.lower() in existing_ids:
-                st.error("🚫 This Tree ID already exists.")
+            elif id_val.lower() in [entry["ID"].lower() for entry in st.session_state.entries]:
+                st.error("🚫 A tree with this ID already exists. Please enter a unique Tree ID.")
             else:
                 safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', id_val)
                 _, ext = os.path.splitext(tree_image.name)
                 filename = f"{safe_id}{ext}"
                 image_url = upload_image_to_drive(tree_image, filename)
-
                 entry = {
                     "ID": id_val,
                     "Type": tree_type,
@@ -214,20 +178,19 @@ if qr_id and qr_id not in existing_ids:
                     "Latitude": st.session_state.coords.get("latitude", ""),
                     "Longitude": st.session_state.coords.get("longitude", "")
                 }
-
                 st.session_state.entries.append(entry)
                 save_to_gsheet(entry)
-                st.success("✅ Entry added and image uploaded!")
+                st.success("✅ Entry added and image saved!")
 
-# 5. Show Entries
+# 4. Table
 if st.session_state.entries:
-    st.header("5. Current Entries")
+    st.header("4. Current Entries")
     df = pd.DataFrame(st.session_state.entries)
     st.dataframe(df)
 
-# 6. Export
+# 5. Export
 if st.session_state.entries:
-    st.header("6. Export Data")
+    st.header("5. Export Data")
     csv_data = pd.DataFrame(st.session_state.entries).to_csv(index=False).encode("utf-8")
     st.download_button("Download CSV", csv_data, "tree_data.csv", "text/csv")
 
