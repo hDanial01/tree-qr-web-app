@@ -82,7 +82,7 @@ if "coords" not in st.session_state:
 
 st.title("🌳 Tree QR Scanner")
 
-# QR Capture
+# 1. Capture QR Code
 st.header("1. Capture QR Code (Camera Input)")
 captured = st.camera_input("📸 Take a photo of the QR code")
 
@@ -100,32 +100,35 @@ if captured:
     else:
         st.error("❌ No QR code detected.")
 
-# Persistent QR scan result feedback
+# 2. Show QR feedback and GPS capture button
 if st.session_state.qr_result:
+    st.header("2. QR Code Status and GPS Location")
     if st.session_state.qr_status == "duplicate":
         st.error(f"🚫 QR Code ID '{st.session_state.qr_result}' already exists in the system.")
     elif st.session_state.qr_status == "unique":
         st.success(f"✅ QR Code Found: {st.session_state.qr_result} (ID is unique)")
 
-# Try to get GPS coordinates (only run once after QR scan)
-if st.session_state.qr_status == "unique" and not st.session_state.coords:
-    coords = streamlit_js_eval(
-        js_expressions='navigator.geolocation.getCurrentPosition((pos) => pos.coords)',
-        key="get_coords"
-    )
-    if coords and "latitude" in coords:
-        st.session_state.coords = coords
+        if st.button("📍 Get Location"):
+            coords = streamlit_js_eval(
+                js_expressions='navigator.geolocation.getCurrentPosition((pos) => pos.coords)',
+                key="get_coords"
+            )
+            if coords and "latitude" in coords:
+                st.session_state.coords = coords
+                st.success(f"📍 Location: {coords['latitude']}, {coords['longitude']}")
+            else:
+                st.warning("⚠️ Unable to retrieve location. Please allow GPS permission.")
 
-# Show location if available
-if st.session_state.coords:
-    st.success(f"📍 Location: {st.session_state.coords['latitude']}, {st.session_state.coords['longitude']}")
+        if st.session_state.coords:
+            st.markdown(f"**Latitude:** {st.session_state.coords.get('latitude', '')}")
+            st.markdown(f"**Longitude:** {st.session_state.coords.get('longitude', '')}")
 
-# Tree data entry form (only if QR is unique)
+# 3. Fill Tree Details Form (if QR is unique)
 existing_ids = [entry["ID"].lower() for entry in st.session_state.entries]
 qr_id = st.session_state.qr_result.lower() if st.session_state.qr_result else ""
 
 if qr_id and qr_id not in existing_ids:
-    st.header("2. Fill Tree Details")
+    st.header("3. Fill Tree Details")
     with st.form("tree_form"):
         id_val = st.text_input("Tree ID", value=st.session_state.qr_result)
         tree_type = st.selectbox("Tree Type", ["A - Hibiscus/Hibiscus rosa-sinensis", "B -  Rubber tree/Hevea brasiliensis", "C - Mango tree/Mangifera indica", "D - Jackfruit tree/Artocarpus heterophyllus", "E - Merbau/Intsia palembanica"])
@@ -164,21 +167,16 @@ if qr_id and qr_id not in existing_ids:
                 st.session_state.entries.append(entry)
                 save_to_gsheet(entry)
                 st.success("✅ Entry added and image saved!")
-else:
-    if st.session_state.qr_result:
-        st.info("📷 Scan a different QR code to enter new tree data.")
-    else:
-        st.info("📷 Please scan a QR code to begin.")
 
-# Display entries table
+# 4. Display Current Entries
 if st.session_state.entries:
-    st.header("3. Current Entries")
+    st.header("4. Current Entries")
     df = pd.DataFrame(st.session_state.entries)
     st.dataframe(df)
 
-# Export section
+# 5. Export Options
 if st.session_state.entries:
-    st.header("4. Export Data")
+    st.header("5. Export Data")
     csv_data = pd.DataFrame(st.session_state.entries).to_csv(index=False).encode("utf-8")
     st.download_button("Download CSV", csv_data, "tree_data.csv", "text/csv")
 
