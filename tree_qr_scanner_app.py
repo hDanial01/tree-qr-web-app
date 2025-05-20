@@ -122,47 +122,61 @@ if st.session_state.qr_result:
         # Bokeh Button with safer JS
         loc_button = Button(label="📍 Get Location")
         loc_button.js_on_event("button_click", CustomJS(code="""
-            navigator.geolocation.getCurrentPosition(
-                (loc) => {
-                    if (loc && loc.coords) {
+            console.log("Attempting to get location...");
+            if (!navigator.geolocation) {
+                document.dispatchEvent(new CustomEvent("GET_LOCATION", {
+                    detail: { lat: null, lon: null, error: "Geolocation not supported" }
+                }));
+            } else {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        console.log("Got location:", position.coords);
                         document.dispatchEvent(new CustomEvent("GET_LOCATION", {
                             detail: {
-                                lat: loc.coords.latitude,
-                                lon: loc.coords.longitude
+                                lat: position.coords.latitude,
+                                lon: position.coords.longitude
                             }
-                        }))
-                    } else {
+                        }));
+                    },
+                    (error) => {
+                        console.log("Location error:", error.message);
                         document.dispatchEvent(new CustomEvent("GET_LOCATION", {
-                            detail: { lat: null, lon: null }
-                        }))
-                    }
-                },
-                (err) => {
-                    document.dispatchEvent(new CustomEvent("GET_LOCATION", {
-                        detail: { lat: null, lon: null, error: err.message }
-                    }))
-                }
-            )
+                            detail: {
+                                lat: null,
+                                lon: null,
+                                error: error.message
+                            }
+                        }));
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            }
         """))
 
         result = streamlit_bokeh_events(
             loc_button,
             events="GET_LOCATION",
-            key="get_location",
+            key=f"get_location_{st.session_state.qr_result or 'default'}",
             refresh_on_update=False,
             debounce_time=0,
             override_height=75
         )
 
+
         if result and "GET_LOCATION" in result:
+            st.json(result)  # Show full event data
             lat = result["GET_LOCATION"].get("lat")
             lon = result["GET_LOCATION"].get("lon")
+            error = result["GET_LOCATION"].get("error")
 
             if lat is not None and lon is not None:
                 st.session_state.coords = {"latitude": lat, "longitude": lon}
                 st.success(f"📍 Location captured:\nLat: **{lat}**, Lon: **{lon}**")
+            elif error:
+                st.error(f"⚠️ GPS error: {error}")
             else:
-                st.error("⚠️ GPS permission denied or no data returned.")
+                st.error("⚠️ Unknown location error.")
+
         elif st.session_state.coords:
             st.info(f"📍 Stored Location:\nLat: **{st.session_state.coords.get('latitude')}**, Lon: **{st.session_state.coords.get('longitude')}**")
 
