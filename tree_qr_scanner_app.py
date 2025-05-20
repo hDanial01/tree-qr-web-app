@@ -12,7 +12,7 @@ from openpyxl.drawing.image import Image as XLImage
 import pandas as pd
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
-from streamlit_js_eval import streamlit_js_eval  # For GPS
+from streamlit_js_eval import streamlit_js_eval
 
 # Setup folders
 IMAGE_DIR = "tree_images"
@@ -84,8 +84,19 @@ if "qr_status" not in st.session_state:
     st.session_state.qr_status = None
 if "coords" not in st.session_state:
     st.session_state.coords = {}
+if "iframe_mode" not in st.session_state:
+    st.session_state.iframe_mode = None
 
 st.title("🌳 Tree QR Scanner")
+
+# Detect iframe environment
+iframe_check = streamlit_js_eval(js_expressions="window.self !== window.top", key="iframe_check")
+st.session_state.iframe_mode = iframe_check
+
+if iframe_check:
+    st.warning("⚠️ The app is running inside an iframe. GPS features may not work. Open in a new browser tab for best results.")
+else:
+    st.success("✅ Full screen mode detected. GPS should work as expected.")
 
 # 1. Capture QR Code
 st.header("1. Capture QR Code (Camera Input)")
@@ -120,21 +131,25 @@ if st.session_state.qr_result:
             lon = st.session_state.coords.get("longitude", "")
             st.info(f"📍 Current Location: **Lat:** {lat}, **Long:** {lon}")
 
-        if st.button("📍 Get Location"):
-            try:
-                pos = streamlit_js_eval(
-                    js_expressions='new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject))',
-                    key="get_coords"
-                )
-                if pos and "coords" in pos:
-                    lat = pos["coords"]["latitude"]
-                    lon = pos["coords"]["longitude"]
-                    st.session_state.coords = {"latitude": lat, "longitude": lon}
-                    st.success(f"📍 Location captured: {lat}, {lon}")
-                else:
-                    st.warning("⚠️ GPS request sent but no location returned. Try again.")
-            except Exception as e:
-                st.error(f"📍 GPS error: {e}")
+        if not iframe_check:
+            if st.button("📍 Get Location"):
+                try:
+                    with st.spinner("Fetching GPS location..."):
+                        pos = streamlit_js_eval(
+                            js_expressions='new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject))',
+                            key="get_coords"
+                        )
+                    if pos and "coords" in pos:
+                        lat = pos["coords"]["latitude"]
+                        lon = pos["coords"]["longitude"]
+                        st.session_state.coords = {"latitude": lat, "longitude": lon}
+                        st.success(f"📍 Location captured: {lat}, {lon}")
+                    else:
+                        st.warning("⚠️ GPS request sent but no location returned. Try again.")
+                except Exception as e:
+                    st.error(f"📍 GPS error: {e}")
+        else:
+            st.info("📍 GPS is disabled in iframe mode.")
 
 # 3. Fill Tree Details
 existing_ids = [entry["ID"].lower() for entry in st.session_state.entries]
@@ -156,6 +171,8 @@ if qr_id and qr_id not in existing_ids:
         if submitted:
             if not all([id_val, tree_type, height, canopy, iucn_status, classification, csp, tree_image]):
                 st.error("❌ Please complete all fields.")
+            elif not height.isdigit() or not canopy.isdigit():
+                st.error("❌ Height and Canopy Diameter must be numeric.")
             elif id_val.lower() in [entry["ID"].lower() for entry in st.session_state.entries]:
                 st.error("🚫 A tree with this ID already exists. Please enter a unique Tree ID.")
             else:
