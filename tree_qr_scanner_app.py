@@ -100,30 +100,42 @@ if captured:
     else:
         st.error("❌ No QR code detected.")
 
-# 2. Show QR feedback and GPS capture button
+# 2. QR Status + GPS Capture
 if st.session_state.qr_result:
     st.header("2. QR Code Status and GPS Location")
+
     if st.session_state.qr_status == "duplicate":
         st.error(f"🚫 QR Code ID '{st.session_state.qr_result}' already exists in the system.")
     elif st.session_state.qr_status == "unique":
         st.success(f"✅ QR Code Found: {st.session_state.qr_result} (ID is unique)")
 
         if st.button("📍 Get Location"):
-            coords = streamlit_js_eval(
-                js_expressions='navigator.geolocation.getCurrentPosition((pos) => pos.coords)',
-                key="get_coords"
-            )
-            if coords and "latitude" in coords:
-                st.session_state.coords = coords
-                st.success(f"📍 Location: {coords['latitude']}, {coords['longitude']}")
-            else:
-                st.warning("⚠️ Unable to retrieve location. Please allow GPS permission.")
+            try:
+                coords = streamlit_js_eval(
+                    js_expressions='navigator.geolocation.getCurrentPosition((pos) => pos.coords)',
+                    key="get_coords"
+                )
+                if coords and "latitude" in coords:
+                    st.session_state.coords = coords
+                    st.success(f"📍 Location captured: {coords['latitude']}, {coords['longitude']}")
+                else:
+                    st.warning("⚠️ GPS request sent but no location returned. Try again or use manual input.")
+            except Exception as e:
+                st.error(f"📍 GPS error: {e}")
 
+        # Display current coordinates if available
         if st.session_state.coords:
             st.markdown(f"**Latitude:** {st.session_state.coords.get('latitude', '')}")
             st.markdown(f"**Longitude:** {st.session_state.coords.get('longitude', '')}")
+        else:
+            st.info("📍 If location isn't captured, enter manually below.")
+            manual_lat = st.text_input("Latitude (manual fallback)")
+            manual_lon = st.text_input("Longitude (manual fallback)")
+            if manual_lat and manual_lon:
+                st.session_state.coords = {"latitude": manual_lat, "longitude": manual_lon}
+                st.success("📍 Manual coordinates saved.")
 
-# 3. Fill Tree Details Form (if QR is unique)
+# 3. Fill Tree Details Form
 existing_ids = [entry["ID"].lower() for entry in st.session_state.entries]
 qr_id = st.session_state.qr_result.lower() if st.session_state.qr_result else ""
 
@@ -168,13 +180,13 @@ if qr_id and qr_id not in existing_ids:
                 save_to_gsheet(entry)
                 st.success("✅ Entry added and image saved!")
 
-# 4. Display Current Entries
+# 4. Display Entries
 if st.session_state.entries:
     st.header("4. Current Entries")
     df = pd.DataFrame(st.session_state.entries)
     st.dataframe(df)
 
-# 5. Export Options
+# 5. Export Section
 if st.session_state.entries:
     st.header("5. Export Data")
     csv_data = pd.DataFrame(st.session_state.entries).to_csv(index=False).encode("utf-8")
@@ -188,8 +200,7 @@ if st.session_state.entries:
         ws.append(headers)
         for i, entry in enumerate(st.session_state.entries, start=2):
             ws.append([entry.get(k, "") for k in headers])
-            img_url = entry["Image"]
-            ws.cell(row=i, column=8).value = f'=HYPERLINK("{img_url}", "View Image")'
+            ws.cell(row=i, column=8).value = f'=HYPERLINK("{entry["Image"]}", "View Image")'
         wb.save(path)
         with open(path, "rb") as f:
             st.download_button("Download Excel File", f, "tree_data.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
