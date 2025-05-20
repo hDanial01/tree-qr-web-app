@@ -9,3 +9,4 @@ openpyxl
 PyDrive
 streamlit-js-eval
 bokeh
+streamlit-bokeh-events
