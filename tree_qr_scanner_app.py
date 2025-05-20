@@ -102,12 +102,13 @@ if captured:
     if data:
         data = data.strip()
         st.session_state.qr_result = data
+        st.session_state.coords = {}  # Clear GPS
         existing_ids = [entry["ID"].lower() for entry in st.session_state.entries]
         st.session_state.qr_status = "duplicate" if data.lower() in existing_ids else "unique"
     else:
         st.error("❌ No QR code detected.")
 
-# 2. QR Result + Get Location Button
+# 2. QR Result + Get Location
 if st.session_state.qr_result:
     st.header("2. QR Code Status and GPS Location")
 
@@ -116,20 +117,32 @@ if st.session_state.qr_result:
     elif st.session_state.qr_status == "unique":
         st.success(f"✅ QR Code Found: {st.session_state.qr_result} (ID is unique)")
 
-        # Bokeh Button for GPS
+        # Bokeh Button with safer JS
         loc_button = Button(label="📍 Get Location")
         loc_button.js_on_event("button_click", CustomJS(code="""
             navigator.geolocation.getCurrentPosition(
                 (loc) => {
+                    if (loc && loc.coords) {
+                        document.dispatchEvent(new CustomEvent("GET_LOCATION", {
+                            detail: {
+                                lat: loc.coords.latitude,
+                                lon: loc.coords.longitude
+                            }
+                        }))
+                    } else {
+                        document.dispatchEvent(new CustomEvent("GET_LOCATION", {
+                            detail: { lat: null, lon: null }
+                        }))
+                    }
+                },
+                (err) => {
                     document.dispatchEvent(new CustomEvent("GET_LOCATION", {
-                        detail: {
-                            lat: loc.coords.latitude,
-                            lon: loc.coords.longitude
-                        }
+                        detail: { lat: null, lon: null, error: err.message }
                     }))
                 }
             )
         """))
+
         result = streamlit_bokeh_events(
             loc_button,
             events="GET_LOCATION",
@@ -139,12 +152,15 @@ if st.session_state.qr_result:
             override_height=75
         )
 
-        # Show GPS result
         if result and "GET_LOCATION" in result:
-            lat = result["GET_LOCATION"]["lat"]
-            lon = result["GET_LOCATION"]["lon"]
-            st.session_state.coords = {"latitude": lat, "longitude": lon}
-            st.success(f"📍 Location captured:\nLat: **{lat}**, Lon: **{lon}**")
+            lat = result["GET_LOCATION"].get("lat")
+            lon = result["GET_LOCATION"].get("lon")
+
+            if lat is not None and lon is not None:
+                st.session_state.coords = {"latitude": lat, "longitude": lon}
+                st.success(f"📍 Location captured:\nLat: **{lat}**, Lon: **{lon}**")
+            else:
+                st.error("⚠️ GPS permission denied or no data returned.")
         elif st.session_state.coords:
             st.info(f"📍 Stored Location:\nLat: **{st.session_state.coords.get('latitude')}**, Lon: **{st.session_state.coords.get('longitude')}**")
 
