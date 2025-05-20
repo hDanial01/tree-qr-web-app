@@ -12,7 +12,9 @@ from openpyxl.drawing.image import Image as XLImage
 import pandas as pd
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
-from streamlit_js_eval import streamlit_js_eval  # For GPS
+from bokeh.models.widgets import Button
+from bokeh.models import CustomJS
+from streamlit_bokeh_events import streamlit_bokeh_events
 
 # Setup folders
 IMAGE_DIR = "tree_images"
@@ -87,8 +89,8 @@ if "coords" not in st.session_state:
 
 st.title("🌳 Tree QR Scanner")
 
-# 1. QR Code Scan
-st.header("1. Capture QR Code")
+# 1. QR Code Capture
+st.header("1. Capture QR Code (Camera Input)")
 captured = st.camera_input("📸 Take a photo of the QR code")
 
 if captured:
@@ -105,44 +107,48 @@ if captured:
     else:
         st.error("❌ No QR code detected.")
 
-# 2. QR Result + GPS Section
+# 2. QR Status and GPS Location
 if st.session_state.qr_result:
-    st.header("2. QR Code Status and Location")
+    st.header("2. QR Code Status and GPS Location")
 
     if st.session_state.qr_status == "duplicate":
         st.error(f"🚫 QR Code ID '{st.session_state.qr_result}' already exists.")
     elif st.session_state.qr_status == "unique":
         st.success(f"✅ QR Code Found: {st.session_state.qr_result} (unique)")
 
-        # Show stored GPS if present
-        if st.session_state.coords:
-            st.info(f"📍 Location already captured:\n- Lat: {st.session_state.coords.get('latitude')}\n- Lon: {st.session_state.coords.get('longitude')}")
+        # GPS Button using Bokeh Events
+        loc_button = Button(label="📍 Get Location")
+        loc_button.js_on_event("button_click", CustomJS(code="""
+            navigator.geolocation.getCurrentPosition(
+                (loc) => {
+                    document.dispatchEvent(new CustomEvent("GET_LOCATION", {
+                        detail: {
+                            lat: loc.coords.latitude,
+                            lon: loc.coords.longitude
+                        }
+                    }))
+                }
+            )
+        """))
+        result = streamlit_bokeh_events(
+            loc_button,
+            events="GET_LOCATION",
+            key="get_location",
+            refresh_on_update=False,
+            debounce_time=0,
+            override_height=75
+        )
 
-        if st.button("📍 Get Location"):
-            try:
-                pos = streamlit_js_eval(
-                    js_expressions="""
-                    new Promise((resolve, reject) => {
-                        navigator.geolocation.getCurrentPosition(
-                            (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
-                            (err) => reject(err)
-                        );
-                    })
-                    """,
-                    key="get_coords"
-                )
-                if pos and "latitude" in pos and "longitude" in pos:
-                    st.session_state.coords = {
-                        "latitude": pos["latitude"],
-                        "longitude": pos["longitude"]
-                    }
-                    st.success(f"📍 Location captured:\n- Lat: {pos['latitude']}\n- Lon: {pos['longitude']}")
-                else:
-                    st.warning("⚠️ GPS response received but no data found. Try again.")
-            except Exception as e:
-                st.error(f"📍 GPS error: {e}")
+        # Store and display coordinates
+        if result and "GET_LOCATION" in result:
+            lat = result["GET_LOCATION"]["lat"]
+            lon = result["GET_LOCATION"]["lon"]
+            st.session_state.coords = {"latitude": lat, "longitude": lon}
+            st.success(f"📍 Location captured: Lat {lat}, Lon {lon}")
+        elif st.session_state.coords:
+            st.info(f"📍 Stored Location: Lat {st.session_state.coords.get('latitude')}, Lon {st.session_state.coords.get('longitude')}")
 
-# 3. Tree Detail Form
+# 3. Tree Details Form
 existing_ids = [entry["ID"].lower() for entry in st.session_state.entries]
 qr_id = st.session_state.qr_result.lower() if st.session_state.qr_result else ""
 
@@ -196,13 +202,13 @@ if qr_id and qr_id not in existing_ids:
                 save_to_gsheet(entry)
                 st.success("✅ Entry added and image uploaded!")
 
-# 4. Show Entries
+# 4. Current Entries
 if st.session_state.entries:
     st.header("4. Current Entries")
     df = pd.DataFrame(st.session_state.entries)
     st.dataframe(df)
 
-# 5. Export Options
+# 5. Export Section
 if st.session_state.entries:
     st.header("5. Export Data")
     csv_data = pd.DataFrame(st.session_state.entries).to_csv(index=False).encode("utf-8")
