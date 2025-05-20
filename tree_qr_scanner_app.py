@@ -104,75 +104,73 @@ if captured:
     else:
         st.error("❌ No QR code detected.")
 
-# 2. QR Result and Get Location
+# 2. QR Result
 if st.session_state.qr_result:
-    st.header("2. QR Code Status and GPS Location")
-
+    st.header("2. QR Code Status")
     if st.session_state.qr_status == "duplicate":
         st.error(f"🚫 QR Code ID '{st.session_state.qr_result}' already exists.")
-    else:
+    elif st.session_state.qr_status == "unique":
         st.success(f"✅ QR Code Found: {st.session_state.qr_result} (ID is unique)")
 
-        # Button and JS
-        loc_button = Button(label="📍 Get Location")
-        loc_button.js_on_event("button_click", CustomJS(code="""
-            console.log("Attempting to get location...");
-            if (!navigator.geolocation) {
-                document.dispatchEvent(new CustomEvent("GET_LOCATION", {
-                    detail: { lat: null, lon: null, error: "Geolocation not supported" }
-                }));
-            } else {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        console.log("Got location:", position.coords);
-                        document.dispatchEvent(new CustomEvent("GET_LOCATION", {
-                            detail: {
-                                lat: position.coords.latitude,
-                                lon: position.coords.longitude
-                            }
-                        }));
-                    },
-                    (error) => {
-                        console.log("Location error:", error.message);
-                        document.dispatchEvent(new CustomEvent("GET_LOCATION", {
-                            detail: { lat: null, lon: null, error: error.message }
-                        }));
-                    },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                );
-            }
-        """))
+# 3. Get Location if Unique
+if st.session_state.qr_status == "unique":
+    st.subheader("📍 Get Tree Location")
 
-        # Display button and listen for event
-        result = streamlit_bokeh_events(
-            loc_button,
-            events="GET_LOCATION",
-            key=f"get_location_{st.session_state.qr_result or 'default'}",
-            refresh_on_update=False,
-            debounce_time=0,
-            override_height=75
-        )
+    loc_button = Button(label="📍 Get Location")
+    loc_button.js_on_event("button_click", CustomJS(code="""
+        console.log("Attempting to get location...");
+        if (!navigator.geolocation) {
+            document.dispatchEvent(new CustomEvent("GET_LOCATION", {
+                detail: { lat: null, lon: null, error: "Geolocation not supported" }
+            }));
+        } else {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    document.dispatchEvent(new CustomEvent("GET_LOCATION", {
+                        detail: {
+                            lat: position.coords.latitude,
+                            lon: position.coords.longitude
+                        }
+                    }));
+                },
+                (error) => {
+                    document.dispatchEvent(new CustomEvent("GET_LOCATION", {
+                        detail: { lat: null, lon: null, error: error.message }
+                    }));
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+    """))
 
-        if result and "GET_LOCATION" in result:
-            st.json(result)  # for debugging
-            lat = result["GET_LOCATION"].get("lat")
-            lon = result["GET_LOCATION"].get("lon")
-            error = result["GET_LOCATION"].get("error")
+    result = streamlit_bokeh_events(
+        loc_button,
+        events="GET_LOCATION",
+        key=f"get_location_{st.session_state.qr_result or 'default'}",
+        refresh_on_update=False,
+        debounce_time=0,
+        override_height=75
+    )
 
-            if lat is not None and lon is not None:
-                st.session_state.coords = {"latitude": lat, "longitude": lon}
-                st.success(f"📍 Location captured:\nLat: **{lat}**, Lon: **{lon}**")
-            elif error:
-                st.error(f"⚠️ Location error: {error}")
-        elif st.session_state.coords:
-            st.info(f"📍 Stored Location:\nLat: **{st.session_state.coords['latitude']}**, Lon: **{st.session_state.coords['longitude']}**")
+    if result and "GET_LOCATION" in result:
+        lat = result["GET_LOCATION"].get("lat")
+        lon = result["GET_LOCATION"].get("lon")
+        error = result["GET_LOCATION"].get("error")
 
-# 3. Tree Details Form
+        if lat is not None and lon is not None:
+            st.session_state.coords = {"latitude": lat, "longitude": lon}
+            st.success(f"📍 Location captured:\nLat: **{lat}**, Lon: **{lon}**")
+        elif error:
+            st.error(f"⚠️ Location error: {error}")
+    elif st.session_state.coords:
+        st.info(f"📍 Stored Location:\nLat: **{st.session_state.coords['latitude']}**, Lon: **{st.session_state.coords['longitude']}**")
+
+# 4. Tree Form
 existing_ids = [entry["ID"].lower() for entry in st.session_state.entries]
 qr_id = st.session_state.qr_result.lower() if st.session_state.qr_result else ""
 
 if qr_id and qr_id not in existing_ids:
-    st.header("3. Fill Tree Details")
+    st.header("4. Fill Tree Details")
     with st.form("tree_form"):
         id_val = st.text_input("Tree ID", value=st.session_state.qr_result)
         tree_type = st.selectbox("Tree Type", [
@@ -221,15 +219,15 @@ if qr_id and qr_id not in existing_ids:
                 save_to_gsheet(entry)
                 st.success("✅ Entry added and image uploaded!")
 
-# 4. Show Entries
+# 5. Show Entries
 if st.session_state.entries:
-    st.header("4. Current Entries")
+    st.header("5. Current Entries")
     df = pd.DataFrame(st.session_state.entries)
     st.dataframe(df)
 
-# 5. Export
+# 6. Export
 if st.session_state.entries:
-    st.header("5. Export Data")
+    st.header("6. Export Data")
     csv_data = pd.DataFrame(st.session_state.entries).to_csv(index=False).encode("utf-8")
     st.download_button("Download CSV", csv_data, "tree_data.csv", "text/csv")
 
