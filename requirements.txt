@@ -8,3 +8,4 @@ pandas
 openpyxl
 PyDrive
 streamlit-js-eval
+bokeh
