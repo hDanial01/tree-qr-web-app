@@ -87,8 +87,8 @@ if "coords" not in st.session_state:
 
 st.title("🌳 Tree QR Scanner")
 
-# 1. Capture QR Code
-st.header("1. Capture QR Code (Camera Input)")
+# 1. QR Code Scan
+st.header("1. Capture QR Code")
 captured = st.camera_input("📸 Take a photo of the QR code")
 
 if captured:
@@ -105,38 +105,44 @@ if captured:
     else:
         st.error("❌ No QR code detected.")
 
-# 2. QR Status and GPS
+# 2. QR Result + GPS Section
 if st.session_state.qr_result:
-    st.header("2. QR Code Status and GPS Location")
+    st.header("2. QR Code Status and Location")
 
     if st.session_state.qr_status == "duplicate":
-        st.error(f"🚫 QR Code ID '{st.session_state.qr_result}' already exists in the system.")
+        st.error(f"🚫 QR Code ID '{st.session_state.qr_result}' already exists.")
     elif st.session_state.qr_status == "unique":
-        st.success(f"✅ QR Code Found: {st.session_state.qr_result} (ID is unique)")
+        st.success(f"✅ QR Code Found: {st.session_state.qr_result} (unique)")
 
-        # Show current GPS if already recorded
+        # Show stored GPS if present
         if st.session_state.coords:
-            lat = st.session_state.coords.get("latitude", "")
-            lon = st.session_state.coords.get("longitude", "")
-            st.info(f"📍 Current Location: **Lat:** {lat}, **Long:** {lon}")
+            st.info(f"📍 Location already captured:\n- Lat: {st.session_state.coords.get('latitude')}\n- Lon: {st.session_state.coords.get('longitude')}")
 
         if st.button("📍 Get Location"):
             try:
                 pos = streamlit_js_eval(
-                    js_expressions='new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject))',
+                    js_expressions="""
+                    new Promise((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(
+                            (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+                            (err) => reject(err)
+                        );
+                    })
+                    """,
                     key="get_coords"
                 )
-                if pos and "coords" in pos:
-                    lat = pos["coords"]["latitude"]
-                    lon = pos["coords"]["longitude"]
-                    st.session_state.coords = {"latitude": lat, "longitude": lon}
-                    st.success(f"📍 Location captured: {lat}, {lon}")
+                if pos and "latitude" in pos and "longitude" in pos:
+                    st.session_state.coords = {
+                        "latitude": pos["latitude"],
+                        "longitude": pos["longitude"]
+                    }
+                    st.success(f"📍 Location captured:\n- Lat: {pos['latitude']}\n- Lon: {pos['longitude']}")
                 else:
-                    st.warning("⚠️ GPS request sent but no location returned. Try again.")
+                    st.warning("⚠️ GPS response received but no data found. Try again.")
             except Exception as e:
                 st.error(f"📍 GPS error: {e}")
 
-# 3. Fill Tree Details
+# 3. Tree Detail Form
 existing_ids = [entry["ID"].lower() for entry in st.session_state.entries]
 qr_id = st.session_state.qr_result.lower() if st.session_state.qr_result else ""
 
@@ -144,10 +150,19 @@ if qr_id and qr_id not in existing_ids:
     st.header("3. Fill Tree Details")
     with st.form("tree_form"):
         id_val = st.text_input("Tree ID", value=st.session_state.qr_result)
-        tree_type = st.selectbox("Tree Type", ["A - Hibiscus/Hibiscus rosa-sinensis", "B -  Rubber tree/Hevea brasiliensis", "C - Mango tree/Mangifera indica", "D - Jackfruit tree/Artocarpus heterophyllus", "E - Merbau/Intsia palembanica"])
+        tree_type = st.selectbox("Tree Type", [
+            "A - Hibiscus/Hibiscus rosa-sinensis",
+            "B - Rubber tree/Hevea brasiliensis",
+            "C - Mango tree/Mangifera indica",
+            "D - Jackfruit tree/Artocarpus heterophyllus",
+            "E - Merbau/Intsia palembanica"
+        ])
         height = st.text_input("Height (cm)")
         canopy = st.text_input("Canopy Diameter (cm)")
-        iucn_status = st.selectbox("IUCN Status", ["Not Evaluated", "Data Deficient", "Least Concern", "Near Threatened", "Vulnerable", "Endangered", "Critically Endangered", "Extinct in the Wild", "Extinct"])
+        iucn_status = st.selectbox("IUCN Status", [
+            "Not Evaluated", "Data Deficient", "Least Concern", "Near Threatened",
+            "Vulnerable", "Endangered", "Critically Endangered", "Extinct in the Wild", "Extinct"
+        ])
         classification = st.selectbox("Classification", ["Native", "Non-native"])
         csp = st.selectbox("CSP", ["0%~20%", "21%~40%", "41%~60%", "61%~80%", "81%~100%"])
         tree_image = st.file_uploader("Upload Tree Image", type=["jpg", "jpeg", "png"], key="tree")
@@ -156,13 +171,14 @@ if qr_id and qr_id not in existing_ids:
         if submitted:
             if not all([id_val, tree_type, height, canopy, iucn_status, classification, csp, tree_image]):
                 st.error("❌ Please complete all fields.")
-            elif id_val.lower() in [entry["ID"].lower() for entry in st.session_state.entries]:
-                st.error("🚫 A tree with this ID already exists. Please enter a unique Tree ID.")
+            elif id_val.lower() in existing_ids:
+                st.error("🚫 This Tree ID already exists.")
             else:
                 safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', id_val)
                 _, ext = os.path.splitext(tree_image.name)
                 filename = f"{safe_id}{ext}"
                 image_url = upload_image_to_drive(tree_image, filename)
+
                 entry = {
                     "ID": id_val,
                     "Type": tree_type,
@@ -175,17 +191,18 @@ if qr_id and qr_id not in existing_ids:
                     "Latitude": st.session_state.coords.get("latitude", ""),
                     "Longitude": st.session_state.coords.get("longitude", "")
                 }
+
                 st.session_state.entries.append(entry)
                 save_to_gsheet(entry)
-                st.success("✅ Entry added and image saved!")
+                st.success("✅ Entry added and image uploaded!")
 
-# 4. Current Entries
+# 4. Show Entries
 if st.session_state.entries:
     st.header("4. Current Entries")
     df = pd.DataFrame(st.session_state.entries)
     st.dataframe(df)
 
-# 5. Export
+# 5. Export Options
 if st.session_state.entries:
     st.header("5. Export Data")
     csv_data = pd.DataFrame(st.session_state.entries).to_csv(index=False).encode("utf-8")
