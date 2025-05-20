@@ -89,7 +89,7 @@ if "coords" not in st.session_state:
 
 st.title("🌳 Tree QR Scanner")
 
-# 1. QR Code Capture
+# 1. QR Code Scan
 st.header("1. Capture QR Code (Camera Input)")
 captured = st.camera_input("📸 Take a photo of the QR code")
 
@@ -107,16 +107,16 @@ if captured:
     else:
         st.error("❌ No QR code detected.")
 
-# 2. QR Status and GPS Location
+# 2. QR Result + Get Location Button
 if st.session_state.qr_result:
     st.header("2. QR Code Status and GPS Location")
 
     if st.session_state.qr_status == "duplicate":
         st.error(f"🚫 QR Code ID '{st.session_state.qr_result}' already exists.")
     elif st.session_state.qr_status == "unique":
-        st.success(f"✅ QR Code Found: {st.session_state.qr_result} (unique)")
+        st.success(f"✅ QR Code Found: {st.session_state.qr_result} (ID is unique)")
 
-        # GPS Button using Bokeh Events
+        # Bokeh Button for GPS
         loc_button = Button(label="📍 Get Location")
         loc_button.js_on_event("button_click", CustomJS(code="""
             navigator.geolocation.getCurrentPosition(
@@ -139,14 +139,14 @@ if st.session_state.qr_result:
             override_height=75
         )
 
-        # Store and display coordinates
+        # Show GPS result
         if result and "GET_LOCATION" in result:
             lat = result["GET_LOCATION"]["lat"]
             lon = result["GET_LOCATION"]["lon"]
             st.session_state.coords = {"latitude": lat, "longitude": lon}
-            st.success(f"📍 Location captured: Lat {lat}, Lon {lon}")
+            st.success(f"📍 Location captured:\nLat: **{lat}**, Lon: **{lon}**")
         elif st.session_state.coords:
-            st.info(f"📍 Stored Location: Lat {st.session_state.coords.get('latitude')}, Lon {st.session_state.coords.get('longitude')}")
+            st.info(f"📍 Stored Location:\nLat: **{st.session_state.coords.get('latitude')}**, Lon: **{st.session_state.coords.get('longitude')}**")
 
 # 3. Tree Details Form
 existing_ids = [entry["ID"].lower() for entry in st.session_state.entries]
@@ -202,13 +202,13 @@ if qr_id and qr_id not in existing_ids:
                 save_to_gsheet(entry)
                 st.success("✅ Entry added and image uploaded!")
 
-# 4. Current Entries
+# 4. Show Entries
 if st.session_state.entries:
     st.header("4. Current Entries")
     df = pd.DataFrame(st.session_state.entries)
     st.dataframe(df)
 
-# 5. Export Section
+# 5. Export
 if st.session_state.entries:
     st.header("5. Export Data")
     csv_data = pd.DataFrame(st.session_state.entries).to_csv(index=False).encode("utf-8")
