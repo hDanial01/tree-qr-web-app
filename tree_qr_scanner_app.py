@@ -1,4 +1,3 @@
-
 import streamlit as st
 import cv2
 import numpy as np
@@ -71,7 +70,6 @@ def upload_image_to_drive(image_file, filename):
     os.remove(filename)
     return f"https://drive.google.com/uc?id={file_drive['id']}"
 
-
 # Session state
 if "entries" not in st.session_state:
     st.session_state.entries = load_entries_from_gsheet()
@@ -92,55 +90,65 @@ if captured:
     data, bbox, _ = detector.detectAndDecode(img)
 
     if data:
-        st.success(f"✅ QR Code Found: {data}")
         st.session_state.qr_result = data
+        existing_ids = [entry["ID"].lower() for entry in st.session_state.entries]
+
+        if data.lower() in existing_ids:
+            st.error(f"🚫 QR Code ID '{data}' already exists in the system.")
+        else:
+            st.success(f"✅ QR Code Found: {data} (ID is unique)")
     else:
         st.error("❌ No QR code detected.")
 
 # Tree data entry
-st.header("2. Fill Tree Details")
-with st.form("tree_form"):
-    id_val = st.text_input("Tree ID", value=st.session_state.qr_result)
-    tree_type = st.selectbox("Tree Type", ["A - Hibiscus/Hibiscus rosa-sinensis", "B -  Rubber tree/Hevea brasiliensis", "C - Mango tree/Mangifera indica", "D - Jackfruit tree/Artocarpus heterophyllus", "E - Merbau/Intsia palembanica"])
-    height = st.text_input("Height (cm)")
-    canopy = st.text_input("Canopy Diameter (cm)")
-    iucn_status = st.selectbox("IUCN Status", ["Not Evaluated", "Data Deficient", "Least Concern", "Near Threatened", "Vulnerable", "Endangered", "Critically Endangered", "Extinct in the Wild", "Extinct"])
-    classification = st.selectbox("Classification", ["Native", "Non-native"])
-    csp = st.selectbox("CSP", ["0%~20%", "21%~40%", "41%~60%", "61%~80%", "81%~100%"])
-    tree_image = st.file_uploader("Upload Tree Image", type=["jpg", "jpeg", "png"], key="tree")
+existing_ids = [entry["ID"].lower() for entry in st.session_state.entries]
+qr_id = st.session_state.qr_result.lower() if st.session_state.qr_result else ""
 
-    submitted = st.form_submit_button("Add Entry")
-    if submitted:
-        if not all([id_val, tree_type, height, canopy, iucn_status, classification, csp, tree_image]):
-            st.error("❌ Please complete all fields.")
-        else:
-            # Check for duplicate ID
-            existing_ids = [entry["ID"] for entry in st.session_state.entries]
-            if id_val in existing_ids:
-                st.error("🚫 A tree with this ID already exists. Please enter a unique Tree ID.")
+if qr_id and qr_id not in existing_ids:
+    st.header("2. Fill Tree Details")
+    with st.form("tree_form"):
+        id_val = st.text_input("Tree ID", value=st.session_state.qr_result)
+        tree_type = st.selectbox("Tree Type", ["A - Hibiscus/Hibiscus rosa-sinensis", "B -  Rubber tree/Hevea brasiliensis", "C - Mango tree/Mangifera indica", "D - Jackfruit tree/Artocarpus heterophyllus", "E - Merbau/Intsia palembanica"])
+        height = st.text_input("Height (cm)")
+        canopy = st.text_input("Canopy Diameter (cm)")
+        iucn_status = st.selectbox("IUCN Status", ["Not Evaluated", "Data Deficient", "Least Concern", "Near Threatened", "Vulnerable", "Endangered", "Critically Endangered", "Extinct in the Wild", "Extinct"])
+        classification = st.selectbox("Classification", ["Native", "Non-native"])
+        csp = st.selectbox("CSP", ["0%~20%", "21%~40%", "41%~60%", "61%~80%", "81%~100%"])
+        tree_image = st.file_uploader("Upload Tree Image", type=["jpg", "jpeg", "png"], key="tree")
+
+        submitted = st.form_submit_button("Add Entry")
+        if submitted:
+            if not all([id_val, tree_type, height, canopy, iucn_status, classification, csp, tree_image]):
+                st.error("❌ Please complete all fields.")
             else:
-                safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', id_val)
-                _, ext = os.path.splitext(tree_image.name)
-                filename = f"{safe_id}{ext}"
-                image_path = os.path.join(IMAGE_DIR, filename)
+                # Case-insensitive duplicate check
+                existing_ids = [entry["ID"].lower() for entry in st.session_state.entries]
+                if id_val.lower() in existing_ids:
+                    st.error("🚫 A tree with this ID already exists. Please enter a unique Tree ID.")
+                else:
+                    safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', id_val)
+                    _, ext = os.path.splitext(tree_image.name)
+                    filename = f"{safe_id}{ext}"
+                    image_path = os.path.join(IMAGE_DIR, filename)
 
-                image_url = upload_image_to_drive(tree_image, filename)
+                    image_url = upload_image_to_drive(tree_image, filename)
 
-                entry = {
-                    "ID": id_val,
-                    "Type": tree_type,
-                    "Height": height,
-                    "Canopy": canopy,
-                    "IUCN": iucn_status,
-                    "Classification": classification,
-                    "CSP": csp,
-                    "Image": image_url
-                 }
+                    entry = {
+                        "ID": id_val,
+                        "Type": tree_type,
+                        "Height": height,
+                        "Canopy": canopy,
+                        "IUCN": iucn_status,
+                        "Classification": classification,
+                        "CSP": csp,
+                        "Image": image_url
+                    }
 
-                st.session_state.entries.append(entry)
-                save_to_gsheet(entry)
-                st.success("✅ Entry added and image saved!")
-
+                    st.session_state.entries.append(entry)
+                    save_to_gsheet(entry)
+                    st.success("✅ Entry added and image saved!")
+else:
+    st.info("📷 Scan a unique QR code to enable the data entry form.")
 
 # Display table
 if st.session_state.entries:
