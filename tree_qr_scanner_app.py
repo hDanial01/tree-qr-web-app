@@ -40,13 +40,12 @@ def load_entries_from_gsheet():
     rows = sheet.get_all_values()[1:]
     entries = []
     for row in rows:
-        if len(row) >= 10:  # now expecting 10 columns
+        if len(row) >= 10:
             entries.append({
                 "ID": row[0], "Type": row[1], "Height": row[2], "Canopy": row[3],
                 "IUCN": row[4], "Classification": row[5], "CSP": row[6], "Image": row[7],
                 "Latitude": row[8], "Longitude": row[9]
             })
-
     return entries
 
 def save_to_gsheet(entry):
@@ -56,21 +55,18 @@ def save_to_gsheet(entry):
         entry["IUCN"], entry["Classification"], entry["CSP"], entry["Image"],
         entry.get("Latitude", ""), entry.get("Longitude", "")
     ])
-    
+
 def upload_image_to_drive(image_file, filename):
     with open(filename, "wb") as f:
         f.write(image_file.read())
     file_drive = drive.CreateFile({"title": filename, "parents": [{"id": GOOGLE_DRIVE_FOLDER_ID}]})
     file_drive.SetContentFile(filename)
     file_drive.Upload()
-
-    # Make it publicly accessible
     file_drive.InsertPermission({
         'type': 'anyone',
         'value': 'anyone',
         'role': 'reader'
     })
-
     os.remove(filename)
     return f"https://drive.google.com/uc?id={file_drive['id']}"
 
@@ -79,6 +75,10 @@ if "entries" not in st.session_state:
     st.session_state.entries = load_entries_from_gsheet()
 if "qr_result" not in st.session_state:
     st.session_state.qr_result = ""
+if "latitude" not in st.session_state:
+    st.session_state.latitude = None
+if "longitude" not in st.session_state:
+    st.session_state.longitude = None
 
 st.title("🌳 Tree QR Scanner")
 
@@ -89,12 +89,10 @@ captured = st.camera_input("📸 Take a photo of the QR code")
 if captured:
     file_bytes = np.asarray(bytearray(captured.read()), dtype=np.uint8)
     img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-
     detector = cv2.QRCodeDetector()
     data, bbox, _ = detector.detectAndDecode(img)
 
     if data:
-        # Check live data from Google Sheets for duplicate ID
         latest_entries = load_entries_from_gsheet()
         existing_ids = [entry["ID"] for entry in latest_entries]
 
@@ -106,9 +104,6 @@ if captured:
             st.session_state.qr_result = data
     else:
         st.error("❌ No QR code detected.")
-
-#Get user location
-
 
 # Tree data entry
 st.header("2. Fill Tree Details")
@@ -126,16 +121,27 @@ else:
         csp = st.selectbox("CSP", ["0%~20%", "21%~40%", "41%~60%", "61%~80%", "81%~100%"])
         tree_image = st.file_uploader("Upload Tree Image", type=["jpg", "jpeg", "png"], key="tree")
 
+        st.write("📍 Capture Location")
+        if st.button("Get Location"):
+            location = get_geolocation()
+            if location:
+                st.session_state.latitude = location["coords"]["latitude"]
+                st.session_state.longitude = location["coords"]["longitude"]
+                st.success("📡 Location captured!")
+            else:
+                st.warning("⚠️ Location not available or permission denied.")
+
+        if st.session_state.latitude is not None and st.session_state.longitude is not None:
+            st.write(f"Latitude: `{st.session_state.latitude}`")
+            st.write(f"Longitude: `{st.session_state.longitude}`")
+        else:
+            st.info("Click 'Get Location' above to capture GPS coordinates.")
+
         submitted = st.form_submit_button("Add Entry")
         if submitted:
             if not all([id_val, tree_type, height, canopy, iucn_status, classification, csp, tree_image]):
                 st.error("❌ Please complete all fields.")
             else:
-                # Get GPS location from device
-                location = get_geolocation()
-                lat = location["coords"]["latitude"] if location else None
-                lng = location["coords"]["longitude"] if location else None
-
                 safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', id_val)
                 _, ext = os.path.splitext(tree_image.name)
                 filename = f"{safe_id}{ext}"
@@ -150,21 +156,23 @@ else:
                     "Classification": classification,
                     "CSP": csp,
                     "Image": image_url,
-                    "Latitude": lat,
-                    "Longitude": lng
+                    "Latitude": st.session_state.latitude,
+                    "Longitude": st.session_state.longitude
                 }
 
                 st.session_state.entries.append(entry)
                 save_to_gsheet(entry)
                 st.success("✅ Entry added and image saved!")
 
-                if lat is not None and lng is not None:
-                    st.write(f"📍 Latitude: `{lat}`")
-                    st.write(f"📍 Longitude: `{lng}`")
+                if st.session_state.latitude is not None and st.session_state.longitude is not None:
+                    st.write(f"📍 Latitude saved: `{st.session_state.latitude}`")
+                    st.write(f"📍 Longitude saved: `{st.session_state.longitude}`")
                 else:
-                    st.info("🌍 Location not available or permission denied.")
+                    st.warning("⚠️ No GPS coordinates were captured.")
 
-
+                # Clear coordinates for next entry
+                st.session_state.latitude = None
+                st.session_state.longitude = None
 
 # Display table
 if st.session_state.entries:
@@ -188,7 +196,6 @@ if st.session_state.entries:
             ws.append([entry.get(k, "") for k in headers])
             img_url = entry.get("Image", "")
             ws.cell(row=i, column=8).value = f'=HYPERLINK("{img_url}", "View Image")'
-
         wb.save(path)
         with open(path, "rb") as f:
             st.download_button("Download Excel File", f, "tree_data.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
