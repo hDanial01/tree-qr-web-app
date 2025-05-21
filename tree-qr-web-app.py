@@ -23,7 +23,6 @@ os.makedirs(EXPORT_DIR, exist_ok=True)
 # Google Sheets and Drive Setup
 SHEET_NAME = "TreeQRDatabase"
 GOOGLE_DRIVE_FOLDER_ID = "1iddkNU3O1U6bsoHge1m5a-DDZA_NjSVz"
-creds_dict = json.loads(st.secrets["CREDS_JSON"])
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
