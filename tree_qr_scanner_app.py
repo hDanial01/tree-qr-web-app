@@ -6,7 +6,6 @@ import os
 import re
 import json
 import gspread
-import asyncio
 from streamlit_js_eval import get_geolocation
 from oauth2client.service_account import ServiceAccountCredentials
 from openpyxl import Workbook
