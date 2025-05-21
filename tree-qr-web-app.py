@@ -163,6 +163,8 @@ else:
         if submitted:
             if not all([id_val, tree_name, overall_height, dbh, canopy, iucn_status, classification, csp, tree_image]):
                 st.error("❌ Please complete all fields.")
+            elif st.session_state.latitude is None or st.session_state.longitude is None:
+                st.error("❌ GPS location is missing. Please click 'Get Location' and try again.")
             else:
                 safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', id_val)
                 _, ext = os.path.splitext(tree_image.name)
@@ -188,14 +190,13 @@ else:
                 save_to_gsheet(entry)
                 st.success("✅ Entry added and image saved!")
 
-                if st.session_state.latitude is not None and st.session_state.longitude is not None:
-                    st.write(f"📍 Latitude saved: `{st.session_state.latitude}`")
-                    st.write(f"📍 Longitude saved: `{st.session_state.longitude}`")
-                else:
-                    st.warning("⚠️ No GPS coordinates were captured.")
+                st.write(f"📍 Latitude saved: `{st.session_state.latitude}`")
+                st.write(f"📍 Longitude saved: `{st.session_state.longitude}`")
 
+                # Reset coordinates
                 st.session_state.latitude = None
                 st.session_state.longitude = None
+
 
 # Display table
 if st.session_state.entries:
