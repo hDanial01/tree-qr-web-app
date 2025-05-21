@@ -73,6 +73,14 @@ def upload_image_to_drive(image_file, filename):
 # Session state
 if "entries" not in st.session_state:
     st.session_state.entries = load_entries_from_gsheet()
+
+    # 🔧 Ensure all required keys exist in every entry for consistent display
+    required_keys = ["ID", "Name", "Overall Height", "DBH", "Canopy", "IUCN",
+                     "Classification", "CSP", "Image", "Latitude", "Longitude"]
+    for entry in st.session_state.entries:
+        for key in required_keys:
+            entry.setdefault(key, "")
+
 if "qr_result" not in st.session_state:
     st.session_state.qr_result = ""
 if "latitude" not in st.session_state:
@@ -125,7 +133,7 @@ if st.session_state.location_requested:
         st.session_state.latitude = location["coords"]["latitude"]
         st.session_state.longitude = location["coords"]["longitude"]
         st.success("📡 Location captured!")
-        st.session_state.location_requested = False  # Reset after capture
+        st.session_state.location_requested = False
     else:
         st.info("📍 Waiting for browser permission or location data...")
 
@@ -184,7 +192,6 @@ else:
                 else:
                     st.warning("⚠️ No GPS coordinates were captured.")
 
-                # Clear coordinates for next entry
                 st.session_state.latitude = None
                 st.session_state.longitude = None
 
