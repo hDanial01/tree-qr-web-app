@@ -6,6 +6,7 @@ import os
 import re
 import json
 import gspread
+import asyncio
 from streamlit_js_eval import get_geolocation
 from oauth2client.service_account import ServiceAccountCredentials
 from openpyxl import Workbook
@@ -108,6 +109,34 @@ if captured:
 # Tree data entry
 st.header("2. Fill Tree Details")
 
+st.header("📍 Capture Your GPS Location")
+
+# Track whether location was requested
+if "location_requested" not in st.session_state:
+    st.session_state.location_requested = False
+
+# Trigger geolocation on button click
+if st.button("Get Location"):
+    st.session_state.location_requested = True
+
+# Call get_geolocation only after user requested it
+if st.session_state.location_requested:
+    location = get_geolocation()
+    if location:
+        st.session_state.latitude = location["coords"]["latitude"]
+        st.session_state.longitude = location["coords"]["longitude"]
+        st.success("📡 Location captured!")
+        st.session_state.location_requested = False  # Reset after capture
+    else:
+        st.info("📍 Waiting for browser permission or location data...")
+
+# Show location if available
+if st.session_state.latitude is not None and st.session_state.longitude is not None:
+    st.write(f"📍 Latitude: `{st.session_state.latitude}`")
+    st.write(f"📍 Longitude: `{st.session_state.longitude}`")
+else:
+    st.info("⚠️ No coordinates yet. Click 'Get Location' to allow access.")
+
 if st.session_state.qr_result == "":
     st.warning("⚠️ Please scan a unique QR code before filling in the form.")
 else:
@@ -120,22 +149,6 @@ else:
         classification = st.selectbox("Classification", ["Class 1", "Class 2"])
         csp = st.selectbox("CSP", ["0%~20%", "21%~40%", "41%~60%", "61%~80%", "81%~100%"])
         tree_image = st.file_uploader("Upload Tree Image", type=["jpg", "jpeg", "png"], key="tree")
-
-        st.write("📍 Capture Location")
-        if st.button("Get Location"):
-            location = get_geolocation()
-            if location:
-                st.session_state.latitude = location["coords"]["latitude"]
-                st.session_state.longitude = location["coords"]["longitude"]
-                st.success("📡 Location captured!")
-            else:
-                st.warning("⚠️ Location not available or permission denied.")
-
-        if st.session_state.latitude is not None and st.session_state.longitude is not None:
-            st.write(f"Latitude: `{st.session_state.latitude}`")
-            st.write(f"Longitude: `{st.session_state.longitude}`")
-        else:
-            st.info("Click 'Get Location' above to capture GPS coordinates.")
 
         submitted = st.form_submit_button("Add Entry")
         if submitted:
