@@ -1,4 +1,3 @@
-
 import streamlit as st
 import cv2
 import numpy as np
@@ -92,32 +91,39 @@ if captured:
     data, bbox, _ = detector.detectAndDecode(img)
 
     if data:
-        st.success(f"✅ QR Code Found: {data}")
-        st.session_state.qr_result = data
+        # Check live data from Google Sheets for duplicate ID
+        latest_entries = load_entries_from_gsheet()
+        existing_ids = [entry["ID"] for entry in latest_entries]
+
+        if data in existing_ids:
+            st.error(f"🚫 This QR Code (ID: '{data}') already exists in the database. Please scan a unique QR code.")
+            st.session_state.qr_result = ""
+        else:
+            st.success(f"✅ QR Code Found and ID is unique: {data}")
+            st.session_state.qr_result = data
     else:
         st.error("❌ No QR code detected.")
 
 # Tree data entry
 st.header("2. Fill Tree Details")
-with st.form("tree_form"):
-    id_val = st.text_input("Tree ID", value=st.session_state.qr_result)
-    tree_type = st.selectbox("Tree Type", ["Tree 1", "Tree 2", "Tree 3", "Tree 4", "Tree 5"])
-    height = st.text_input("Height (m)")
-    canopy = st.text_input("Canopy Diameter (m)")
-    iucn_status = st.selectbox("IUCN Status", ["Native", "Non-Native"])
-    classification = st.selectbox("Classification", ["Class 1", "Class 2"])
-    csp = st.selectbox("CSP", ["0%~20%", "21%~40%", "41%~60%", "61%~80%", "81%~100%"])
-    tree_image = st.file_uploader("Upload Tree Image", type=["jpg", "jpeg", "png"], key="tree")
 
-    submitted = st.form_submit_button("Add Entry")
-    if submitted:
-        if not all([id_val, tree_type, height, canopy, iucn_status, classification, csp, tree_image]):
-            st.error("❌ Please complete all fields.")
-        else:
-            # Check for duplicate ID
-            existing_ids = [entry["ID"] for entry in st.session_state.entries]
-            if id_val in existing_ids:
-                st.error("🚫 A tree with this ID already exists. Please enter a unique Tree ID.")
+if st.session_state.qr_result == "":
+    st.warning("⚠️ Please scan a unique QR code before filling in the form.")
+else:
+    with st.form("tree_form"):
+        id_val = st.text_input("Tree ID", value=st.session_state.qr_result)
+        tree_type = st.selectbox("Tree Type", ["Tree 1", "Tree 2", "Tree 3", "Tree 4", "Tree 5"])
+        height = st.text_input("Height (m)")
+        canopy = st.text_input("Canopy Diameter (m)")
+        iucn_status = st.selectbox("IUCN Status", ["Native", "Non-Native"])
+        classification = st.selectbox("Classification", ["Class 1", "Class 2"])
+        csp = st.selectbox("CSP", ["0%~20%", "21%~40%", "41%~60%", "61%~80%", "81%~100%"])
+        tree_image = st.file_uploader("Upload Tree Image", type=["jpg", "jpeg", "png"], key="tree")
+
+        submitted = st.form_submit_button("Add Entry")
+        if submitted:
+            if not all([id_val, tree_type, height, canopy, iucn_status, classification, csp, tree_image]):
+                st.error("❌ Please complete all fields.")
             else:
                 safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', id_val)
                 _, ext = os.path.splitext(tree_image.name)
@@ -135,12 +141,11 @@ with st.form("tree_form"):
                     "Classification": classification,
                     "CSP": csp,
                     "Image": image_url
-                 }
+                }
 
                 st.session_state.entries.append(entry)
                 save_to_gsheet(entry)
                 st.success("✅ Entry added and image saved!")
-
 
 # Display table
 if st.session_state.entries:
