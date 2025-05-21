@@ -40,18 +40,18 @@ def load_entries_from_gsheet():
     rows = sheet.get_all_values()[1:]
     entries = []
     for row in rows:
-        if len(row) >= 10:
+        if len(row) >= 12:
             entries.append({
-                "ID": row[0], "Name": row[1], "Overall Height": row[2], "DBH": row[3], "Canopy": row[4],
-                "IUCN": row[5], "Classification": row[6], "CSP": row[7], "Image": row[8],
-                "Latitude": row[9], "Longitude": row[10]
+                "ID": row[0], "Tree Name": row[1], "Name": row[2], "Overall Height": row[3], "DBH": row[4],
+                "Canopy": row[5], "IUCN": row[6], "Classification": row[7], "CSP": row[8],
+                "Image": row[9], "Latitude": row[10], "Longitude": row[11]
             })
     return entries
 
 def save_to_gsheet(entry):
     sheet = get_worksheet()
     sheet.append_row([
-        entry["ID"], entry["Name"], entry["Overall Height"], entry["DBH"], entry["Canopy"],
+        entry["ID"], entry["Tree Name"], entry["Name"], entry["Overall Height"], entry["DBH"], entry["Canopy"],
         entry["IUCN"], entry["Classification"], entry["CSP"], entry["Image"],
         entry.get("Latitude", ""), entry.get("Longitude", "")
     ])
@@ -74,8 +74,7 @@ def upload_image_to_drive(image_file, filename):
 if "entries" not in st.session_state:
     st.session_state.entries = load_entries_from_gsheet()
 
-    # 🔧 Ensure all required keys exist in every entry for consistent display
-    required_keys = ["ID", "Name", "Overall Height", "DBH", "Canopy", "IUCN",
+    required_keys = ["ID", "Tree Name", "Name", "Overall Height", "DBH", "Canopy", "IUCN",
                      "Classification", "CSP", "Image", "Latitude", "Longitude"]
     for entry in st.session_state.entries:
         for key in required_keys:
@@ -118,15 +117,12 @@ st.header("2. Fill Tree Details")
 
 st.header("📍 Capture Your GPS Location")
 
-# Track whether location was requested
 if "location_requested" not in st.session_state:
     st.session_state.location_requested = False
 
-# Trigger geolocation on button click
 if st.button("Get Location"):
     st.session_state.location_requested = True
 
-# Call get_geolocation only after user requested it
 if st.session_state.location_requested:
     location = get_geolocation()
     if location:
@@ -137,7 +133,6 @@ if st.session_state.location_requested:
     else:
         st.info("📍 Waiting for browser permission or location data...")
 
-# Show location if available
 if st.session_state.latitude is not None and st.session_state.longitude is not None:
     st.write(f"📍 Latitude: `{st.session_state.latitude}`")
     st.write(f"📍 Longitude: `{st.session_state.longitude}`")
@@ -149,7 +144,13 @@ if st.session_state.qr_result == "":
 else:
     with st.form("tree_form"):
         id_val = st.text_input("Tree ID", value=st.session_state.qr_result)
-        tree_name = st.selectbox("Tree Name", ["Tree 1", "Tree 2", "Tree 3", "Tree 4", "Tree 5"])
+        
+        # NEW: Custom Tree Name
+        tree_name_suffix = st.text_input("Tree Name (Suffix only)", value="1")
+        tree_custom_name = f"GGN/25/{tree_name_suffix}"
+        st.markdown(f"🔖 **Full Tree Name:** `{tree_custom_name}`")
+
+        tree_name = st.selectbox("Common Name", ["Tree 1", "Tree 2", "Tree 3", "Tree 4", "Tree 5"])
         overall_height = st.text_input("Overall Height (m)")
         dbh = st.text_input("DBH (cm)")
         canopy = st.text_input("Canopy Diameter (cm)")
@@ -170,6 +171,7 @@ else:
 
                 entry = {
                     "ID": id_val,
+                    "Tree Name": tree_custom_name,
                     "Name": tree_name,
                     "Overall Height": overall_height,
                     "DBH": dbh,
@@ -211,12 +213,12 @@ if st.session_state.entries:
         path = os.path.join(EXPORT_DIR, "tree_data.xlsx")
         wb = Workbook()
         ws = wb.active
-        headers = ["ID", "Name", "Overall Height", "DBH", "Canopy", "IUCN", "Classification", "CSP", "Image", "Latitude", "Longitude"]
+        headers = ["ID", "Tree Name", "Name", "Overall Height", "DBH", "Canopy", "IUCN", "Classification", "CSP", "Image", "Latitude", "Longitude"]
         ws.append(headers)
         for i, entry in enumerate(st.session_state.entries, start=2):
             ws.append([entry.get(k, "") for k in headers])
             img_url = entry.get("Image", "")
-            ws.cell(row=i, column=8).value = f'=HYPERLINK("{img_url}", "View Image")'
+            ws.cell(row=i, column=10).value = f'=HYPERLINK("{img_url}", "View Image")'
         wb.save(path)
         with open(path, "rb") as f:
             st.download_button("Download Excel File", f, "tree_data.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
