@@ -120,7 +120,7 @@ if st.button("Get Location"):
 
 # Call get_geolocation only after user requested it
 if st.session_state.location_requested:
-    location = get_geolocation()
+    location = get_geolocation(options={"enableHighAccuracy": True, "timeout": 10000})
     if location:
         st.session_state.latitude = location["coords"]["latitude"]
         st.session_state.longitude = location["coords"]["longitude"]
