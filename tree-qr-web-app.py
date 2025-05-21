@@ -166,9 +166,10 @@ else:
             elif st.session_state.latitude is None or st.session_state.longitude is None:
                 st.error("❌ GPS location is missing. Please click 'Get Location' and try again.")
             else:
-                safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', id_val)
+                safe_tree_name = re.sub(r'[^a-zA-Z0-9_-]', '_', tree_custom_name)
                 _, ext = os.path.splitext(tree_image.name)
-                filename = f"{safe_id}{ext}"
+                filename = f"{safe_tree_name}{ext}"
+
                 image_url = upload_image_to_drive(tree_image, filename)
 
                 entry = {
