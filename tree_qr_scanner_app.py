@@ -6,7 +6,7 @@ import os
 import re
 import json
 import gspread
-import geocoder
+from streamlit_js_eval import get_geolocation
 from oauth2client.service_account import ServiceAccountCredentials
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
@@ -74,7 +74,6 @@ def upload_image_to_drive(image_file, filename):
     os.remove(filename)
     return f"https://drive.google.com/uc?id={file_drive['id']}"
 
-
 # Session state
 if "entries" not in st.session_state:
     st.session_state.entries = load_entries_from_gsheet()
@@ -109,16 +108,7 @@ if captured:
         st.error("❌ No QR code detected.")
 
 #Get user location
-def get_location():
-    try:
-        g = geocoder.ip('me')
-        if g.ok:
-            return g.latlng  # Returns [latitude, longitude]
-        else:
-            return [None, None]
-    except Exception as e:
-        st.warning(f"Location fetch failed: {e}")
-        return [None, None]
+
 
 # Tree data entry
 st.header("2. Fill Tree Details")
@@ -141,13 +131,15 @@ else:
             if not all([id_val, tree_type, height, canopy, iucn_status, classification, csp, tree_image]):
                 st.error("❌ Please complete all fields.")
             else:
+                # Get GPS location from device
+                location = get_geolocation()
+                lat = location["coords"]["latitude"] if location else None
+                lng = location["coords"]["longitude"] if location else None
+
                 safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', id_val)
                 _, ext = os.path.splitext(tree_image.name)
                 filename = f"{safe_id}{ext}"
-                image_path = os.path.join(IMAGE_DIR, filename)
-
                 image_url = upload_image_to_drive(tree_image, filename)
-                lat, lng = get_location()
 
                 entry = {
                     "ID": id_val,
@@ -162,17 +154,16 @@ else:
                     "Longitude": lng
                 }
 
-
                 st.session_state.entries.append(entry)
                 save_to_gsheet(entry)
                 st.success("✅ Entry added and image saved!")
 
-                # Display Lat Long Values
                 if lat is not None and lng is not None:
                     st.write(f"📍 Latitude: `{lat}`")
                     st.write(f"📍 Longitude: `{lng}`")
                 else:
-                    st.info("🌍 Location not available.")
+                    st.info("🌍 Location not available or permission denied.")
+
 
 
 # Display table
