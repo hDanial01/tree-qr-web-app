@@ -42,16 +42,16 @@ def load_entries_from_gsheet():
     for row in rows:
         if len(row) >= 10:
             entries.append({
-                "ID": row[0], "Type": row[1], "Height": row[2], "Canopy": row[3],
-                "IUCN": row[4], "Classification": row[5], "CSP": row[6], "Image": row[7],
-                "Latitude": row[8], "Longitude": row[9]
+                "ID": row[0], "Name": row[1], "Overall Height": row[2], "DBH": row[3], "Canopy": row[4],
+                "IUCN": row[5], "Classification": row[6], "CSP": row[7], "Image": row[8],
+                "Latitude": row[9], "Longitude": row[10]
             })
     return entries
 
 def save_to_gsheet(entry):
     sheet = get_worksheet()
     sheet.append_row([
-        entry["ID"], entry["Type"], entry["Height"], entry["Canopy"],
+        entry["ID"], entry["Name"], entry["Overall Height"], entry["DBH"], entry["Canopy"],
         entry["IUCN"], entry["Classification"], entry["CSP"], entry["Image"],
         entry.get("Latitude", ""), entry.get("Longitude", "")
     ])
@@ -141,9 +141,10 @@ if st.session_state.qr_result == "":
 else:
     with st.form("tree_form"):
         id_val = st.text_input("Tree ID", value=st.session_state.qr_result)
-        tree_type = st.selectbox("Tree Type", ["Tree 1", "Tree 2", "Tree 3", "Tree 4", "Tree 5"])
-        height = st.text_input("Height (m)")
-        canopy = st.text_input("Canopy Diameter (m)")
+        tree_name = st.selectbox("Tree Name", ["Tree 1", "Tree 2", "Tree 3", "Tree 4", "Tree 5"])
+        overall_height = st.text_input("Overall Height (m)")
+        dbh = st.text_input("DBH (cm)")
+        canopy = st.text_input("Canopy Diameter (cm)")
         iucn_status = st.selectbox("IUCN Status", ["Native", "Non-Native"])
         classification = st.selectbox("Classification", ["Class 1", "Class 2"])
         csp = st.selectbox("CSP", ["0%~20%", "21%~40%", "41%~60%", "61%~80%", "81%~100%"])
@@ -151,7 +152,7 @@ else:
 
         submitted = st.form_submit_button("Add Entry")
         if submitted:
-            if not all([id_val, tree_type, height, canopy, iucn_status, classification, csp, tree_image]):
+            if not all([id_val, tree_name, overall_height, dbh, canopy, iucn_status, classification, csp, tree_image]):
                 st.error("❌ Please complete all fields.")
             else:
                 safe_id = re.sub(r'[^a-zA-Z0-9_-]', '_', id_val)
@@ -161,8 +162,9 @@ else:
 
                 entry = {
                     "ID": id_val,
-                    "Type": tree_type,
-                    "Height": height,
+                    "Name": tree_name,
+                    "Overall Height": overall_height,
+                    "DBH": dbh,
                     "Canopy": canopy,
                     "IUCN": iucn_status,
                     "Classification": classification,
@@ -202,7 +204,7 @@ if st.session_state.entries:
         path = os.path.join(EXPORT_DIR, "tree_data.xlsx")
         wb = Workbook()
         ws = wb.active
-        headers = ["ID", "Type", "Height", "Canopy", "IUCN", "Classification", "CSP", "Image", "Latitude", "Longitude"]
+        headers = ["ID", "Name", "Overall Height", "DBH", "Canopy", "IUCN", "Classification", "CSP", "Image", "Latitude", "Longitude"]
         ws.append(headers)
         for i, entry in enumerate(st.session_state.entries, start=2):
             ws.append([entry.get(k, "") for k in headers])
