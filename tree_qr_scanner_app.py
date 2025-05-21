@@ -7,6 +7,7 @@ import re
 import json
 import gspread
 from streamlit_js_eval import get_geolocation
+from streamlit_js_eval import streamlit_js_eval
 from oauth2client.service_account import ServiceAccountCredentials
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
@@ -118,14 +119,17 @@ if "location_requested" not in st.session_state:
 if st.button("Get Location"):
     st.session_state.location_requested = True
 
-# Call get_geolocation only after user requested it
+# Use streamlit_js_eval instead of get_geolocation directly
 if st.session_state.location_requested:
-    location = get_geolocation(options={"enableHighAccuracy": True, "timeout": 10000})
-    if location:
-        st.session_state.latitude = location["coords"]["latitude"]
-        st.session_state.longitude = location["coords"]["longitude"]
-        st.success("📡 Location captured!")
-        st.session_state.location_requested = False  # Reset after capture
+    loc = streamlit_js_eval(
+        js_expressions="navigator.geolocation.getCurrentPosition((pos) => ({lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy}))",
+        key="eval_location"
+    )
+    if loc and "lat" in loc:
+        st.session_state.latitude = loc["lat"]
+        st.session_state.longitude = loc["lon"]
+        st.success(f"📡 Location captured with {int(loc['accuracy'])} meters accuracy!")
+        st.session_state.location_requested = False
     else:
         st.info("📍 Waiting for browser permission or location data...")
 
