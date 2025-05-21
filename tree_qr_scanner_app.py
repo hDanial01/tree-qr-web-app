@@ -6,6 +6,7 @@ import os
 import re
 import json
 import gspread
+import geocoder
 from oauth2client.service_account import ServiceAccountCredentials
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
@@ -39,18 +40,21 @@ def load_entries_from_gsheet():
     rows = sheet.get_all_values()[1:]
     entries = []
     for row in rows:
-        if len(row) >= 8:
+        if len(row) >= 10:  # now expecting 10 columns
             entries.append({
                 "ID": row[0], "Type": row[1], "Height": row[2], "Canopy": row[3],
-                "IUCN": row[4], "Classification": row[5], "CSP": row[6], "Image": row[7]
+                "IUCN": row[4], "Classification": row[5], "CSP": row[6], "Image": row[7],
+                "Latitude": row[8], "Longitude": row[9]
             })
+
     return entries
 
 def save_to_gsheet(entry):
     sheet = get_worksheet()
     sheet.append_row([
         entry["ID"], entry["Type"], entry["Height"], entry["Canopy"],
-        entry["IUCN"], entry["Classification"], entry["CSP"], entry["Image"]
+        entry["IUCN"], entry["Classification"], entry["CSP"], entry["Image"],
+        entry.get("Latitude", ""), entry.get("Longitude", "")
     ])
     
 def upload_image_to_drive(image_file, filename):
@@ -104,6 +108,18 @@ if captured:
     else:
         st.error("❌ No QR code detected.")
 
+#Get user location
+def get_location():
+    try:
+        g = geocoder.ip('me')
+        if g.ok:
+            return g.latlng  # Returns [latitude, longitude]
+        else:
+            return [None, None]
+    except Exception as e:
+        st.warning(f"Location fetch failed: {e}")
+        return [None, None]
+
 # Tree data entry
 st.header("2. Fill Tree Details")
 
@@ -131,6 +147,7 @@ else:
                 image_path = os.path.join(IMAGE_DIR, filename)
 
                 image_url = upload_image_to_drive(tree_image, filename)
+                lat, lng = get_location()
 
                 entry = {
                     "ID": id_val,
@@ -140,12 +157,21 @@ else:
                     "IUCN": iucn_status,
                     "Classification": classification,
                     "CSP": csp,
-                    "Image": image_url
+                    "Image": image_url,
+                    "Latitude": lat,
+                    "Longitude": lng
                 }
+
 
                 st.session_state.entries.append(entry)
                 save_to_gsheet(entry)
                 st.success("✅ Entry added and image saved!")
+
+                # Display Lat Long Values
+                if lat and lng:
+                    st.map(pd.DataFrame({'lat': [lat], 'lon': [lng]}))
+                else:
+                    st.info("🌍 Location not available.")
 
 # Display table
 if st.session_state.entries:
@@ -163,12 +189,11 @@ if st.session_state.entries:
         path = os.path.join(EXPORT_DIR, "tree_data.xlsx")
         wb = Workbook()
         ws = wb.active
-        headers = ["ID", "Type", "Height", "Canopy", "IUCN", "Classification", "CSP", "Image"]
+        headers = ["ID", "Type", "Height", "Canopy", "IUCN", "Classification", "CSP", "Image", "Latitude", "Longitude"]
         ws.append(headers)
         for i, entry in enumerate(st.session_state.entries, start=2):
-            ws.append([entry[k] for k in headers])
-            # Insert image URL as hyperlink instead of embedding
-            img_url = entry["Image"]
+            ws.append([entry.get(k, "") for k in headers])
+            img_url = entry.get("Image", "")
             ws.cell(row=i, column=8).value = f'=HYPERLINK("{img_url}", "View Image")'
 
         wb.save(path)
