@@ -6,13 +6,13 @@ import os
 import re
 import json
 import gspread
+from streamlit_js_eval import get_geolocation
 from oauth2client.service_account import ServiceAccountCredentials
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image as XLImage
 import pandas as pd
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
-import streamlit.components.v1 as components
 
 # Setup folders
 IMAGE_DIR = "tree_images"
@@ -110,41 +110,31 @@ st.header("2. Fill Tree Details")
 
 st.header("📍 Capture Your GPS Location")
 
-result = components.html(
-    """
-    <script>
-    const sendLocation = () => {
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                const coords = {
-                    lat: pos.coords.latitude,
-                    lon: pos.coords.longitude,
-                    accuracy: pos.coords.accuracy
-                };
-                Streamlit.setComponentValue(coords);
-            },
-            (err) => {
-                Streamlit.setComponentValue({error: err.message});
-            },
-            {enableHighAccuracy: true, timeout: 10000}
-        );
-    }
-    </script>
-    <button onclick="sendLocation()">📍 Get Location</button>
-    """,
-    height=100
-)
+# Track whether location was requested
+if "location_requested" not in st.session_state:
+    st.session_state.location_requested = False
 
-if result and isinstance(result, dict):
-    if "lat" in result:
-        st.session_state.latitude = result["lat"]
-        st.session_state.longitude = result["lon"]
-        st.success("📡 Precise location captured!")
-        st.write(f"📍 Latitude: `{result['lat']}`")
-        st.write(f"📍 Longitude: `{result['lon']}`")
-        st.write(f"🎯 Accuracy: `{int(result['accuracy'])} meters`")
-    elif "error" in result:
-        st.error(f"🚫 Location error: {result['error']}")
+# Trigger geolocation on button click
+if st.button("Get Location"):
+    st.session_state.location_requested = True
+
+# Call get_geolocation only after user requested it
+if st.session_state.location_requested:
+    location = get_geolocation()
+    if location:
+        st.session_state.latitude = location["coords"]["latitude"]
+        st.session_state.longitude = location["coords"]["longitude"]
+        st.success("📡 Location captured!")
+        st.session_state.location_requested = False  # Reset after capture
+    else:
+        st.info("📍 Waiting for browser permission or location data...")
+
+# Show location if available
+if st.session_state.latitude is not None and st.session_state.longitude is not None:
+    st.write(f"📍 Latitude: `{st.session_state.latitude}`")
+    st.write(f"📍 Longitude: `{st.session_state.longitude}`")
+else:
+    st.info("⚠️ No coordinates yet. Click 'Get Location' to allow access.")
 
 if st.session_state.qr_result == "":
     st.warning("⚠️ Please scan a unique QR code before filling in the form.")
