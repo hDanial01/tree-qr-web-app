@@ -168,10 +168,12 @@ else:
                 st.success("✅ Entry added and image saved!")
 
                 # Display Lat Long Values
-                if lat and lng:
-                    st.map(pd.DataFrame({'lat': [lat], 'lon': [lng]}))
+                if lat is not None and lng is not None:
+                    st.write(f"📍 Latitude: `{lat}`")
+                    st.write(f"📍 Longitude: `{lng}`")
                 else:
                     st.info("🌍 Location not available.")
+
 
 # Display table
 if st.session_state.entries:
