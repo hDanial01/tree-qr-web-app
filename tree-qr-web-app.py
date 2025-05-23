@@ -150,8 +150,8 @@ else:
         overall_height = st.text_input("Overall Height (m)")
         dbh = st.text_input("DBH (cm)")
         canopy = st.text_input("Canopy Diameter (cm)")
-        iucn_status = st.selectbox("IUCN Status", ["Native", "Non-Native"])
-        classification = st.selectbox("Classification", ["Class 1", "Class 2"])
+        iucn_status = st.selectbox("IUCN Status", ["Status 1", "Status 2", "Status 3"])
+        classification = st.selectbox("Classification", ["Native", "Non-Native"])
         csp = st.selectbox("CSP", ["0%~20%", "21%~40%", "41%~60%", "61%~80%", "81%~100%"])
 
         tree_image_a = st.file_uploader("Upload Tree Image A", type=["jpg", "jpeg", "png"], key="tree_a")
