@@ -146,7 +146,17 @@ else:
         tree_custom_name = f"GGN/25/{tree_name_suffix}"
         st.markdown(f"\U0001F516 **Full Tree Name:** `{tree_custom_name}`")
 
-        tree_name = st.selectbox("Common Name", ["Tree 1", "Tree 2", "Tree 3", "Tree 4", "Tree 5"])
+        tree_names = [
+            "Baeckea frutescens (BFr)", "Buchanania (BA)", "Caesalpinia ferrea (CFe)", "Calophyllum inophyllum (CIn)",
+            "Canarium album (CAl)", "Cedrela (Cdl)", "Coccoloba uvifera (CUv)", "Dalbergia sissoo (DSi)",
+            "Dillenia suffruticosa (DSu)", "Diospyros buxifolia (DBu)", "Diospyros discolor (DDi)",
+            "Dipterocarpus turbinatus (DTu)", "Ficus Gold (FGo)", "Filicium decipiens (FDe)",
+            "Gymnostoma rumphianum (GRu)", "Hopea ferrea (HFr)", "Hopea odorata (HOd)", "Lagerstroemia indica (LIn)",
+            "Lagerstroemia speciosa (LSp)", "Maniltoa browneoides (MBr)", "Melaleuca cajuputi (MCa)",
+            "Mesua ferrea (MFr)", "Ormasia pinnata (OPi)", "Planchonella obovata (POb)", "Podocarpus rumphii (PRm)",
+            "Samanea saman (SSa)", "Shorea wangtianshuea (SWa)", "Spatheodea camanviata (SCa)",
+            "Syzygium grande (SGr)", "Terminalia calamansanai (TCa)", "Terminalia catappa (TCp)"
+        ]
         overall_height = st.text_input("Overall Height (m)")
         dbh = st.text_input("DBH (cm)")
         canopy = st.text_input("Canopy Diameter (cm)")
