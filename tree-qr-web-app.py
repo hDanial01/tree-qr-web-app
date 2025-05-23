@@ -157,6 +157,7 @@ else:
             "Samanea saman (SSa)", "Shorea wangtianshuea (SWa)", "Spatheodea camanviata (SCa)",
             "Syzygium grande (SGr)", "Terminalia calamansanai (TCa)", "Terminalia catappa (TCp)"
         ]
+        tree_name = st.selectbox("Tree Name", tree_names)
         overall_height = st.text_input("Overall Height (m)")
         dbh = st.text_input("DBH (cm)")
         canopy = st.text_input("Canopy Diameter (cm)")
