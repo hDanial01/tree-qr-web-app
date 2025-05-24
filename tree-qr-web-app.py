@@ -165,8 +165,8 @@ else:
         classification = st.selectbox("Classification", ["Native", "Non-Native"])
         csp = st.selectbox("CSP", ["0%~20%", "21%~40%", "41%~60%", "61%~80%", "81%~100%"])
 
-        tree_image_a = st.file_uploader("Upload Tree Image A", type=["jpg", "jpeg", "png"], key="tree_a")
-        tree_image_b = st.file_uploader("Upload Tree Image B", type=["jpg", "jpeg", "png"], key="tree_b")
+        tree_image_a = st.file_uploader("Upload Tree Image (Overall)", type=["jpg", "jpeg", "png"], key="tree_a")
+        tree_image_b = st.file_uploader("Upload Tree Image (Canopy)", type=["jpg", "jpeg", "png"], key="tree_b")
 
         submitted = st.form_submit_button("Add Entry")
         if submitted:
