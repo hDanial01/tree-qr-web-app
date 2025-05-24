@@ -40,19 +40,20 @@ def load_entries_from_gsheet():
     rows = sheet.get_all_values()[1:]
     entries = []
     for row in rows:
-        if len(row) >= 13:
+        if len(row) >= 10:
             entries.append({
-                "ID": row[0], "Tree Name": row[1], "Name": row[2], "Overall Height": row[3], "DBH": row[4],
-                "Canopy": row[5], "IUCN": row[6], "Classification": row[7], "CSP": row[8],
-                "Image A": row[9], "Image B": row[10], "Latitude": row[11], "Longitude": row[12]
+                "ID": row[0], "Tree Name": row[1], "Name": row[2],
+                "Overall Height": row[3], "DBH": row[4], "Canopy": row[5],
+                "Image A": row[6], "Image B": row[7], "Latitude": row[8], "Longitude": row[9]
             })
     return entries
 
 def save_to_gsheet(entry):
     sheet = get_worksheet()
     sheet.append_row([
-        entry["ID"], entry["Tree Name"], entry["Name"], entry["Overall Height"], entry["DBH"], entry["Canopy"],
-        entry["IUCN"], entry["Classification"], entry["CSP"], entry["Image A"], entry["Image B"],
+        entry["ID"], entry["Tree Name"], entry["Name"],
+        entry["Overall Height"], entry["DBH"], entry["Canopy"],
+        entry["Image A"], entry["Image B"],
         entry.get("Latitude", ""), entry.get("Longitude", "")
     ])
 
@@ -73,8 +74,8 @@ def upload_image_to_drive(image_file, filename):
 # Session state
 if "entries" not in st.session_state:
     st.session_state.entries = load_entries_from_gsheet()
-    required_keys = ["ID", "Tree Name", "Name", "Overall Height", "DBH", "Canopy", "IUCN",
-                     "Classification", "CSP", "Image A", "Image B", "Latitude", "Longitude"]
+    required_keys = ["ID", "Tree Name", "Name", "Overall Height", "DBH", "Canopy",
+                     "Image A", "Image B", "Latitude", "Longitude"]
     for entry in st.session_state.entries:
         for key in required_keys:
             entry.setdefault(key, "")
@@ -161,16 +162,13 @@ else:
         overall_height = st.text_input("Overall Height (m)")
         dbh = st.text_input("DBH (cm)")
         canopy = st.text_input("Canopy Diameter (cm)")
-        iucn_status = st.selectbox("IUCN Status", ["Status 1", "Status 2", "Status 3"])
-        classification = st.selectbox("Classification", ["Native", "Non-Native"])
-        csp = st.selectbox("CSP", ["0%~20%", "21%~40%", "41%~60%", "61%~80%", "81%~100%"])
 
         tree_image_a = st.file_uploader("Upload Tree Image (Overall)", type=["jpg", "jpeg", "png"], key="tree_a")
         tree_image_b = st.file_uploader("Upload Tree Image (Canopy)", type=["jpg", "jpeg", "png"], key="tree_b")
 
         submitted = st.form_submit_button("Add Entry")
         if submitted:
-            if not all([id_val, tree_name, overall_height, dbh, canopy, iucn_status, classification, csp, tree_image_a, tree_image_b]):
+            if not all([id_val, tree_name, overall_height, dbh, canopy, tree_image_a, tree_image_b]):
                 st.error("\u274C Please complete all fields.")
             elif st.session_state.latitude is None or st.session_state.longitude is None:
                 st.error("\u274C GPS location is missing. Please click 'Get Location' and try again.")
@@ -192,9 +190,6 @@ else:
                     "Overall Height": overall_height,
                     "DBH": dbh,
                     "Canopy": canopy,
-                    "IUCN": iucn_status,
-                    "Classification": classification,
-                    "CSP": csp,
                     "Image A": image_url_a,
                     "Image B": image_url_b,
                     "Latitude": st.session_state.latitude,
@@ -227,12 +222,12 @@ if st.session_state.entries:
         path = os.path.join(EXPORT_DIR, "tree_data.xlsx")
         wb = Workbook()
         ws = wb.active
-        headers = ["ID", "Tree Name", "Name", "Overall Height", "DBH", "Canopy", "IUCN", "Classification", "CSP", "Image A", "Image B", "Latitude", "Longitude"]
+        headers = ["ID", "Tree Name", "Name", "Overall Height", "DBH", "Canopy", "Image A", "Image B", "Latitude", "Longitude"]
         ws.append(headers)
         for i, entry in enumerate(st.session_state.entries, start=2):
             ws.append([entry.get(k, "") for k in headers])
-            ws.cell(row=i, column=10).value = f'=HYPERLINK("{entry.get("Image A", "")}", "View A")'
-            ws.cell(row=i, column=11).value = f'=HYPERLINK("{entry.get("Image B", "")}", "View B")'
+            ws.cell(row=i, column=7).value = f'=HYPERLINK("{entry.get("Image A", "")}", "View A")'
+            ws.cell(row=i, column=8).value = f'=HYPERLINK("{entry.get("Image B", "")}", "View B")'
         wb.save(path)
         with open(path, "rb") as f:
             st.download_button("Download Excel File", f, "tree_data.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
