@@ -181,11 +181,11 @@ else:
                 safe_tree_name = re.sub(r'[^a-zA-Z0-9_-]', '_', tree_custom_name)
 
                 _, ext_a = os.path.splitext(tree_image_a.name)
-                filename_a = f"A_{safe_tree_name}{ext_a}"
+                filename_a = f"{safe_tree_name}_A{ext_a}"
                 image_url_a = upload_image_to_drive(tree_image_a, filename_a)
 
                 _, ext_b = os.path.splitext(tree_image_b.name)
-                filename_b = f"B_{safe_tree_name}{ext_b}"
+                filename_b = f"{safe_tree_name}_B{ext_b}"
                 image_url_b = upload_image_to_drive(tree_image_b, filename_b)
 
                 entry = {
