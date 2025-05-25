@@ -32,6 +32,11 @@ gauth = GoogleAuth()
 gauth.credentials = creds
 drive = GoogleDrive(gauth)
 
+# Helper: extract file ID from Google Drive URL
+def extract_drive_file_id(url):
+    match = re.search(r"id=([a-zA-Z0-9_-]+)", url)
+    return match.group(1) if match else None
+
 def get_worksheet():
     return client.open(SHEET_NAME).sheet1
 
@@ -206,11 +211,47 @@ else:
                 st.session_state.latitude = None
                 st.session_state.longitude = None
 
-# Display table
+# Display table and Deletion
 if st.session_state.entries:
     st.header("3. Current Entries")
     df = pd.DataFrame(st.session_state.entries)
     st.dataframe(df)
+
+    # Deletion Feature
+    st.subheader("🗑 Delete Entry")
+    delete_ids = [entry["ID"] for entry in st.session_state.entries]
+    selected_id = st.selectbox("Select an entry ID to delete", delete_ids)
+
+    confirm_delete = st.checkbox("⚠️ I confirm I want to delete this entry and its images from Drive.")
+
+    if st.button("Delete Selected Entry"):
+        if not confirm_delete:
+            st.warning("✅ Please check the confirmation box before deleting.")
+        else:
+            try:
+                # 1. Remove from Google Sheets
+                sheet = get_worksheet()
+                all_rows = sheet.get_all_values()
+                for i, row in enumerate(all_rows[1:], start=2):
+                    if row and row[0] == selected_id:
+                        sheet.delete_rows(i)
+                        break
+
+                # 2. Remove from session & Drive
+                entry_to_delete = next((e for e in st.session_state.entries if e["ID"] == selected_id), None)
+                if entry_to_delete:
+                    file_id_a = extract_drive_file_id(entry_to_delete["Image A"])
+                    file_id_b = extract_drive_file_id(entry_to_delete["Image B"])
+                    if file_id_a:
+                        drive.CreateFile({'id': file_id_a}).Trash()
+                    if file_id_b:
+                        drive.CreateFile({'id': file_id_b}).Trash()
+                    st.session_state.entries = [e for e in st.session_state.entries if e["ID"] != selected_id]
+
+                st.success(f"✅ Entry with ID `{selected_id}` has been deleted.")
+
+            except Exception as e:
+                st.error(f"⚠️ Failed to delete entry: {e}")
 
 # Export section
 if st.session_state.entries:
