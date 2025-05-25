@@ -170,16 +170,25 @@ else:
             st.warning("⚠️ This Tree Name already exists. Please enter a unique suffix.")
 
         tree_names = [
-            "Baeckea frutescens (BFr)", "Buchanania (BA)", "Caesalpinia ferrea (CFe)", "Calophyllum inophyllum (CIn)",
-            "Canarium album (CAl)", "Cedrela (Cdl)", "Coccoloba uvifera (CUv)", "Dalbergia sissoo (DSi)",
-            "Dillenia suffruticosa (DSu)", "Diospyros buxifolia (DBu)", "Diospyros discolor (DDi)",
-            "Dipterocarpus turbinatus (DTu)", "Ficus Gold (FGo)", "Filicium decipiens (FDe)",
-            "Gymnostoma rumphianum (GRu)", "Hopea ferrea (HFr)", "Hopea odorata (HOd)", "Lagerstroemia indica (LIn)",
-            "Lagerstroemia speciosa (LSp)", "Maniltoa browneoides (MBr)", "Melaleuca cajuputi (MCa)",
-            "Mesua ferrea (MFr)", "Ormasia pinnata (OPi)", "Planchonella obovata (POb)", "Podocarpus rumphii (PRm)",
-            "Samanea saman (SSa)", "Shorea wangtianshuea (SWa)", "Spatheodea camanviata (SCa)",
-            "Syzygium grande (SGr)", "Terminalia calamansanai (TCa)", "Terminalia catappa (TCp)"
+            "Alstonia angustiloba", "Aquilaria malaccensis", "Azadirachta indica",
+            "Baringtonia acutangula", "Buchanania arborescens", "Callophyllum inophyllum",
+            "Cerbera odollam rubra", "Cinnamomum iners", "Coccoloba uvifera",
+            "Cratoxylum chochinchinensis", "Cratoxylum cochichinensis", "Cratoxylum formosum",
+            "Dillenia indica", "Diospyros blancoi", "Diptercarpus baudi", "Diptercarpus gracilis",
+            "Dyera costulata", "Eleocarpus grandiflorus", "Ficus lyrate",
+            "Filicium decipiens", "Garcinia hombroniana", "Gardenia carinata",
+            "Heteropanax fragrans", "Hopea ferrea", "Hopea odorata",
+            "Leptospermum brachyandrum", "Licuala grandis", "Maniltoa browneoides",
+            "Mesua ferrea", "Michelia champaka", "Milingtonia hortensis",
+            "Millettia pinnata", "Mimusops elengi", "Pentaspadon monteylii",
+            "Podocarpus macrophyllus", "Podocarpus polystachyus", "Pometia pinnata",
+            "Saraca thaipingensis", "Shorea roxburghii", "Spathodea campanulata",
+            "Sterculia foetida", "Sterculia paviflora", "Sygzium polyanthum",
+            "Syzgium grande", "Syzgium spicata", "Tabebuia argentea",
+            "Tabebuia rosea", "Terminalia calamansanai", "Terminalia catappa",
+            "Tristania obovata", "Tristaniopsis whiteana", "Unknown sp", "Mixed sp"
         ]
+
         tree_name = st.selectbox("Tree Name", tree_names)
         overall_height = st.text_input("Overall Height (m)")
         dbh = st.text_input("DBH (cm)")
