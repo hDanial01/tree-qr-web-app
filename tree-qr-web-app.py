@@ -245,10 +245,11 @@ if st.session_state.entries:
     df = pd.DataFrame(st.session_state.entries)
     st.dataframe(df)
 
-    # Delete Entry Section
-    st.subheader("🗑 Delete Entry")
-    delete_ids = [entry["ID"] for entry in st.session_state.entries]
-    selected_id = st.selectbox("Select an entry ID to delete", delete_ids)
+    # Map Tree Name to its corresponding ID (assumes Tree Name is unique)
+    delete_map = {entry["Tree Name"]: entry["ID"] for entry in st.session_state.entries}
+    selected_tree_name = st.selectbox("Select a tree to delete", list(delete_map.keys()))
+    selected_id = delete_map[selected_tree_name]
+
 
     confirm_delete = st.checkbox("⚠️ Confirm deletion of selected entry from Google Sheets")
 
