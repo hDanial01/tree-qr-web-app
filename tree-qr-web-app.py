@@ -329,8 +329,57 @@ if st.session_state.entries:
             edit_submit = st.form_submit_button("Save Changes")
 
             if edit_submit:
-                # [Your existing update logic]
-                pass
+                try:
+                # Delete old row in Google Sheets
+                sheet = get_worksheet()
+                all_rows = sheet.get_all_values()
+                for idx, row in enumerate(all_rows[1:], start=2):
+                    if row and row[0] == entry_to_edit["ID"]:
+                        sheet.delete_rows(idx)
+                        break
+
+                # Replace images if new ones are uploaded
+                safe_tree_name = re.sub(r'[^a-zA-Z0-9_-]', '_', tree_name)
+
+                image_url_a = entry_to_edit["Image A"]
+                image_url_b = entry_to_edit["Image B"]
+
+                if new_image_a:
+                    delete_file_from_drive(image_url_a)
+                    _, ext_a = os.path.splitext(new_image_a.name)
+                    filename_a = f"{safe_tree_name}_A{ext_a}"
+                    image_url_a = upload_image_to_drive(new_image_a, filename_a)
+
+                if new_image_b:
+                    delete_file_from_drive(image_url_b)
+                    _, ext_b = os.path.splitext(new_image_b.name)
+                    filename_b = f"{safe_tree_name}_B{ext_b}"
+                    image_url_b = upload_image_to_drive(new_image_b, filename_b)
+
+                # Save updated entry to Google Sheets
+                updated_entry = {
+                    "ID": id_val,
+                    "Tree Name": tree_name,
+                    "Name": species_name,
+                    "Overall Height": overall_height,
+                    "DBH": dbh,
+                    "Canopy": canopy,
+                    "Image A": image_url_a,
+                    "Image B": image_url_b,
+                    "Latitude": entry_to_edit["Latitude"],
+                    "Longitude": entry_to_edit["Longitude"]
+                }
+
+                save_to_gsheet(updated_entry)
+                st.session_state.entries = load_entries_from_gsheet()
+                st.success(f"✅ Updated entry: {tree_name}")
+
+                # Reset edit mode
+                st.session_state.edit_enabled = False
+
+            except Exception as e:
+                st.error(f"❌ Failed to edit entry: {e}")
+
 else:
     st.info("No entries found. Add a tree entry first to enable editing.")
 
