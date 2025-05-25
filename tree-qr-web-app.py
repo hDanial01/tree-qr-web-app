@@ -4,12 +4,10 @@ import numpy as np
 from PIL import Image
 import os
 import re
-import json
 import gspread
 from streamlit_js_eval import get_geolocation
 from oauth2client.service_account import ServiceAccountCredentials
 from openpyxl import Workbook
-from openpyxl.drawing.image import Image as XLImage
 import pandas as pd
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
@@ -31,11 +29,6 @@ client = gspread.authorize(creds)
 gauth = GoogleAuth()
 gauth.credentials = creds
 drive = GoogleDrive(gauth)
-
-# Helper: extract file ID from Google Drive URL
-def extract_drive_file_id(url):
-    match = re.search(r"id=([a-zA-Z0-9_-]+)", url)
-    return match.group(1) if match else None
 
 def get_worksheet():
     return client.open(SHEET_NAME).sheet1
@@ -146,11 +139,16 @@ else:
 if st.session_state.qr_result == "":
     st.warning("\u26A0\uFE0F Please scan a unique QR code before filling in the form.")
 else:
+    existing_tree_names = [entry["Tree Name"] for entry in st.session_state.entries]
+
     with st.form("tree_form"):
         id_val = st.text_input("Tree ID", value=st.session_state.qr_result)
         tree_name_suffix = st.text_input("Tree Name (Suffix only)", value="1")
         tree_custom_name = f"GGN/25/{tree_name_suffix}"
         st.markdown(f"\U0001F516 **Full Tree Name:** `{tree_custom_name}`")
+
+        if tree_custom_name in existing_tree_names:
+            st.warning("⚠️ This Tree Name already exists. Please enter a unique suffix.")
 
         tree_names = [
             "Baeckea frutescens (BFr)", "Buchanania (BA)", "Caesalpinia ferrea (CFe)", "Calophyllum inophyllum (CIn)",
@@ -173,7 +171,9 @@ else:
 
         submitted = st.form_submit_button("Add Entry")
         if submitted:
-            if not all([id_val, tree_name, overall_height, dbh, canopy, tree_image_a, tree_image_b]):
+            if tree_custom_name in existing_tree_names:
+                st.error("❌ This Tree Name already exists. Please use a different suffix.")
+            elif not all([id_val, tree_name, overall_height, dbh, canopy, tree_image_a, tree_image_b]):
                 st.error("\u274C Please complete all fields.")
             elif st.session_state.latitude is None or st.session_state.longitude is None:
                 st.error("\u274C GPS location is missing. Please click 'Get Location' and try again.")
@@ -211,47 +211,35 @@ else:
                 st.session_state.latitude = None
                 st.session_state.longitude = None
 
-# Display table and Deletion
+# Display table
 if st.session_state.entries:
     st.header("3. Current Entries")
     df = pd.DataFrame(st.session_state.entries)
     st.dataframe(df)
 
-    # Deletion Feature
+    # Delete Entry Section
     st.subheader("🗑 Delete Entry")
     delete_ids = [entry["ID"] for entry in st.session_state.entries]
     selected_id = st.selectbox("Select an entry ID to delete", delete_ids)
 
-    confirm_delete = st.checkbox("⚠️ I confirm I want to delete this entry and its images from Drive.")
+    confirm_delete = st.checkbox("⚠️ Confirm deletion of selected entry from Google Sheets")
 
     if st.button("Delete Selected Entry"):
         if not confirm_delete:
-            st.warning("✅ Please check the confirmation box before deleting.")
+            st.warning("✅ Please confirm deletion with the checkbox.")
         else:
             try:
-                # 1. Remove from Google Sheets
                 sheet = get_worksheet()
                 all_rows = sheet.get_all_values()
-                for i, row in enumerate(all_rows[1:], start=2):
+                for idx, row in enumerate(all_rows[1:], start=2):  # skip header
                     if row and row[0] == selected_id:
-                        sheet.delete_rows(i)
+                        sheet.delete_rows(idx)
                         break
 
-                # 2. Remove from session & Drive
-                entry_to_delete = next((e for e in st.session_state.entries if e["ID"] == selected_id), None)
-                if entry_to_delete:
-                    file_id_a = extract_drive_file_id(entry_to_delete["Image A"])
-                    file_id_b = extract_drive_file_id(entry_to_delete["Image B"])
-                    if file_id_a:
-                        drive.CreateFile({'id': file_id_a}).Trash()
-                    if file_id_b:
-                        drive.CreateFile({'id': file_id_b}).Trash()
-                    st.session_state.entries = [e for e in st.session_state.entries if e["ID"] != selected_id]
-
-                st.success(f"✅ Entry with ID `{selected_id}` has been deleted.")
-
+                st.session_state.entries = [e for e in st.session_state.entries if e["ID"] != selected_id]
+                st.success(f"✅ Deleted entry with ID: `{selected_id}`")
             except Exception as e:
-                st.error(f"⚠️ Failed to delete entry: {e}")
+                st.error(f"❌ Failed to delete: {e}")
 
 # Export section
 if st.session_state.entries:
