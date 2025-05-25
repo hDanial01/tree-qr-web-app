@@ -55,9 +55,28 @@ def save_to_gsheet(entry):
         entry.get("Latitude", ""), entry.get("Longitude", "")
     ])
 
+def delete_file_from_drive(file_url):
+    try:
+        match = re.search(r'id=([a-zA-Z0-9_-]+)', file_url)
+        if match:
+            file_id = match.group(1)
+            file_drive = drive.CreateFile({'id': file_id})
+            file_drive.Delete()
+    except Exception as e:
+        st.warning(f"Could not delete image from Drive: {e}")
+
 def upload_image_to_drive(image_file, filename):
     with open(filename, "wb") as f:
         f.write(image_file.read())
+
+    # Remove old file with same name
+    file_list = drive.ListFile({
+        'q': f"'{GOOGLE_DRIVE_FOLDER_ID}' in parents and title = '{filename}' and trashed = false"
+    }).GetList()
+
+    for old_file in file_list:
+        old_file.Delete()
+
     file_drive = drive.CreateFile({"title": filename, "parents": [{"id": GOOGLE_DRIVE_FOLDER_ID}]})
     file_drive.SetContentFile(filename)
     file_drive.Upload()
@@ -231,15 +250,17 @@ if st.session_state.entries:
             try:
                 sheet = get_worksheet()
                 all_rows = sheet.get_all_values()
-                for idx, row in enumerate(all_rows[1:], start=2):  # skip header
+                for idx, row in enumerate(all_rows[1:], start=2):
                     if row and row[0] == selected_id:
+                        if len(row) >= 8:
+                            delete_file_from_drive(row[6])  # Image A
+                            delete_file_from_drive(row[7])  # Image B
                         sheet.delete_rows(idx)
                         break
-
                 st.session_state.entries = [e for e in st.session_state.entries if e["ID"] != selected_id]
-                st.success(f"✅ Deleted entry with ID: `{selected_id}`")
+                st.success(f"✅ Deleted entry and associated images for ID: `{selected_id}`")
             except Exception as e:
-                st.error(f"❌ Failed to delete: {e}")
+                st.error(f"❌ Failed to delete entry or images: {e}")
 
 # Export section
 if st.session_state.entries:
