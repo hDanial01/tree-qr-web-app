@@ -272,6 +272,76 @@ if st.session_state.entries:
             except Exception as e:
                 st.error(f"❌ Failed to delete entry or images: {e}")
 
+# Add this after the Delete Entry section
+
+st.subheader("📂 Edit Entry")
+edit_map = {entry["Tree Name"]: entry for entry in st.session_state.entries}
+selected_edit_name = st.selectbox("Select a tree to edit", list(edit_map.keys()))
+entry_to_edit = edit_map[selected_edit_name]
+
+with st.form("edit_form"):
+    id_val = st.text_input("Tree ID", value=entry_to_edit["ID"])
+    tree_name = st.text_input("Tree Name", value=entry_to_edit["Tree Name"])
+    species_name = st.selectbox("Species Name", tree_names, index=tree_names.index(entry_to_edit["Name"]))
+    overall_height = st.text_input("Overall Height (m)", value=entry_to_edit["Overall Height"])
+    dbh = st.text_input("DBH (cm)", value=entry_to_edit["DBH"])
+    canopy = st.text_input("Canopy Diameter (cm)", value=entry_to_edit["Canopy"])
+
+    new_image_a = st.file_uploader("Replace Image A (optional)", type=["jpg", "jpeg", "png"])
+    new_image_b = st.file_uploader("Replace Image B (optional)", type=["jpg", "jpeg", "png"])
+
+    edit_submit = st.form_submit_button("Save Changes")
+
+    if edit_submit:
+        try:
+            # Delete old row in Google Sheets
+            sheet = get_worksheet()
+            all_rows = sheet.get_all_values()
+            for idx, row in enumerate(all_rows[1:], start=2):
+                if row and row[0] == entry_to_edit["ID"]:
+                    sheet.delete_rows(idx)
+                    break
+
+            # Replace images if new ones are uploaded
+            safe_tree_name = re.sub(r'[^a-zA-Z0-9_-]', '_', tree_name)
+
+            image_url_a = entry_to_edit["Image A"]
+            image_url_b = entry_to_edit["Image B"]
+
+            if new_image_a:
+                delete_file_from_drive(image_url_a)
+                _, ext_a = os.path.splitext(new_image_a.name)
+                filename_a = f"{safe_tree_name}_A{ext_a}"
+                image_url_a = upload_image_to_drive(new_image_a, filename_a)
+
+            if new_image_b:
+                delete_file_from_drive(image_url_b)
+                _, ext_b = os.path.splitext(new_image_b.name)
+                filename_b = f"{safe_tree_name}_B{ext_b}"
+                image_url_b = upload_image_to_drive(new_image_b, filename_b)
+
+            # Save updated entry
+            updated_entry = {
+                "ID": id_val,
+                "Tree Name": tree_name,
+                "Name": species_name,
+                "Overall Height": overall_height,
+                "DBH": dbh,
+                "Canopy": canopy,
+                "Image A": image_url_a,
+                "Image B": image_url_b,
+                "Latitude": entry_to_edit["Latitude"],
+                "Longitude": entry_to_edit["Longitude"]
+            }
+
+            save_to_gsheet(updated_entry)
+            st.session_state.entries = load_entries_from_gsheet()
+            st.success(f"✅ Updated entry: {tree_name}")
+
+        except Exception as e:
+            st.error(f"❌ Failed to edit entry: {e}")
+
+
 # Export section
 if st.session_state.entries:
     st.header("4. Export Data")
