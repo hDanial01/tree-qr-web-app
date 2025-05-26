@@ -230,72 +230,72 @@ if st.session_state.entries:
     st.dataframe(df)
 
 # Edit entry
-st.subheader("📂 Edit Entry")
+#st.subheader("📂 Edit Entry")
 
-if st.session_state.entries:
+#if st.session_state.entries:
     # Map Tree Name to its corresponding entry
-    edit_map = {entry["Tree Name"]: entry for entry in st.session_state.entries}
+    #edit_map = {entry["Tree Name"]: entry for entry in st.session_state.entries}
     
-    selected_edit_name = st.selectbox("Select a tree to edit", list(edit_map.keys()))
-    entry_to_edit = edit_map[selected_edit_name]
+    #selected_edit_name = st.selectbox("Select a tree to edit", list(edit_map.keys()))
+    #entry_to_edit = edit_map[selected_edit_name]
 
-    if "edit_enabled" not in st.session_state:
-        st.session_state.edit_enabled = False
+    #if "edit_enabled" not in st.session_state:
+    #    st.session_state.edit_enabled = False
 
-    if st.button("✏️ Enable Edit Mode"):
-        st.session_state.edit_enabled = True
+    #if st.button("✏️ Enable Edit Mode"):
+        #st.session_state.edit_enabled = True
 
-    if st.session_state.edit_enabled:
-        with st.form("edit_form"):
-            tree_name = st.text_input("Tree Name", value=entry_to_edit["Tree Name"])
+    #if st.session_state.edit_enabled:
+    #    with st.form("edit_form"):
+    #        tree_name = st.text_input("Tree Name", value=entry_to_edit["Tree Name"])
 
             # List of species (make sure it's defined here or globally)
-            tree_names = [
-                "Alstonia angustiloba", "Aquilaria malaccensis", "Azadirachta indica",
-                "Baringtonia acutangula", "Buchanania arborescens", "Callophyllum inophyllum",
-                "Cerbera odollam rubra", "Cinnamomum iners", "Coccoloba uvifera",
-                "Cratoxylum chochinchinensis", "Cratoxylum cochichinensis", "Cratoxylum formosum",
-                "Dillenia indica", "Diospyros blancoi", "Diptercarpus baudi", "Diptercarpus gracilis",
-                "Dyera costulata", "Eleocarpus grandiflorus", "Ficus lyrate",
-                "Filicium decipiens", "Garcinia hombroniana", "Gardenia carinata",
-                "Heteropanax fragrans", "Hopea ferrea", "Hopea odorata",
-                "Leptospermum brachyandrum", "Licuala grandis", "Maniltoa browneoides",
-                "Mesua ferrea", "Michelia champaka", "Milingtonia hortensis",
-                "Millettia pinnata", "Mimusops elengi", "Pentaspadon monteylii",
-                "Podocarpus macrophyllus", "Podocarpus polystachyus", "Pometia pinnata",
-                "Saraca thaipingensis", "Shorea roxburghii", "Spathodea campanulata",
-                "Sterculia foetida", "Sterculia paviflora", "Sygzium polyanthum",
-                "Syzgium grande", "Syzgium spicata", "Tabebuia argentea",
-                "Tabebuia rosea", "Terminalia calamansanai", "Terminalia catappa",
-                "Tristania obovata", "Tristaniopsis whiteana", "Unknown sp", "Mixed sp"
-            ]
+    #        tree_names = [
+    #            "Alstonia angustiloba", "Aquilaria malaccensis", "Azadirachta indica",
+    #            "Baringtonia acutangula", "Buchanania arborescens", "Callophyllum inophyllum",
+    #            "Cerbera odollam rubra", "Cinnamomum iners", "Coccoloba uvifera",
+    #            "Cratoxylum chochinchinensis", "Cratoxylum cochichinensis", "Cratoxylum formosum",
+    #            "Dillenia indica", "Diospyros blancoi", "Diptercarpus baudi", "Diptercarpus gracilis",
+    #            "Dyera costulata", "Eleocarpus grandiflorus", "Ficus lyrate",
+    #            "Filicium decipiens", "Garcinia hombroniana", "Gardenia carinata",
+    #            "Heteropanax fragrans", "Hopea ferrea", "Hopea odorata",
+    #            "Leptospermum brachyandrum", "Licuala grandis", "Maniltoa browneoides",
+    #            "Mesua ferrea", "Michelia champaka", "Milingtonia hortensis",
+    #            "Millettia pinnata", "Mimusops elengi", "Pentaspadon monteylii",
+    #            "Podocarpus macrophyllus", "Podocarpus polystachyus", "Pometia pinnata",
+    #            "Saraca thaipingensis", "Shorea roxburghii", "Spathodea campanulata",
+    #            "Sterculia foetida", "Sterculia paviflora", "Sygzium polyanthum",
+    #            "Syzgium grande", "Syzgium spicata", "Tabebuia argentea",
+    #            "Tabebuia rosea", "Terminalia calamansanai", "Terminalia catappa",
+    #            "Tristania obovata", "Tristaniopsis whiteana", "Unknown sp", "Mixed sp"
+    #        ]
 
-            species_name = st.selectbox(
-                "Species Name", tree_names,
-                index=tree_names.index(entry_to_edit["Name"]) if entry_to_edit["Name"] in tree_names else 0
-            )
+           #species_name = st.selectbox(
+           #     "Species Name", tree_names,
+           #     index=tree_names.index(entry_to_edit["Name"]) if entry_to_edit["Name"] in tree_names else 0
+           # )
 
-            overall_height = st.text_input("Overall Height (m)", value=entry_to_edit["Overall Height"])
-            overall_height = ["1", "2", "3", "4", "5", "6", "7"]
+            #overall_height = st.text_input("Overall Height (m)", value=entry_to_edit["Overall Height"])
+            #overall_height = ["1", "2", "3", "4", "5", "6", "7"]
             
-            dbh = st.text_input("DBH (cm)", value=entry_to_edit["DBH"])
-            dbh = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
-            canopy = st.text_input("Canopy Diameter (cm)", value=entry_to_edit["Canopy"])
+            #dbh = st.text_input("DBH (cm)", value=entry_to_edit["DBH"])
+            #dbh = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
+            #canopy = st.text_input("Canopy Diameter (cm)", value=entry_to_edit["Canopy"])
 
             #new_image_a = st.file_uploader("Replace Image A (optional)", type=["jpg", "jpeg", "png"])
             #new_image_b = st.file_uploader("Replace Image B (optional)", type=["jpg", "jpeg", "png"])
 
-            edit_submit = st.form_submit_button("Save Changes")
+            #edit_submit = st.form_submit_button("Save Changes")
 
-            if edit_submit:
-                try:
+            #if edit_submit:
+            #    try:
                     # Delete old row in Google Sheets
-                    sheet = get_worksheet()
-                    all_rows = sheet.get_all_values()
-                    for idx, row in enumerate(all_rows[1:], start=2):
-                        if row and row[0] == entry_to_edit["Tree Name"]:
-                            sheet.delete_rows(idx)
-                            break
+            #        sheet = get_worksheet()
+            #        all_rows = sheet.get_all_values()
+            #        for idx, row in enumerate(all_rows[1:], start=2):
+            #            if row and row[0] == entry_to_edit["Tree Name"]:
+            #                sheet.delete_rows(idx)
+            #                  break
 
                     # Replace images if new ones are uploaded
                     #safe_tree_name = re.sub(r'[^a-zA-Z0-9_-]', '_', tree_name)
@@ -316,28 +316,28 @@ if st.session_state.entries:
                     #    image_url_b = upload_image_to_drive(new_image_b, filename_b)
 
                     # Save updated entry
-                    updated_entry = {
-                        "Tree Name": tree_name,
-                        "Name": species_name,
-                        "Overall Height": overall_height,
-                        "DBH": dbh,
-                        "Canopy": canopy,
+                    #updated_entry = {
+                    #    "Tree Name": tree_name,
+                    #    "Name": species_name,
+                    #    "Overall Height": overall_height,
+                    #    "DBH": dbh,
+                    #    "Canopy": canopy,
                         #"Image A": image_url_a,
                         #"Image B": image_url_b,
-                        "Latitude": entry_to_edit["Latitude"],
-                        "Longitude": entry_to_edit["Longitude"]
-                    }
+                    #    "Latitude": entry_to_edit["Latitude"],
+                    #    "Longitude": entry_to_edit["Longitude"]
+                    #}
 
-                    save_to_gsheet(updated_entry)
-                    st.session_state.entries = load_entries_from_gsheet()
-                    st.success(f"✅ Updated entry: {tree_name}")
-                    st.session_state.edit_enabled = False
+                    #save_to_gsheet(updated_entry)
+                    #st.session_state.entries = load_entries_from_gsheet()
+                    #st.success(f"✅ Updated entry: {tree_name}")
+                    #st.session_state.edit_enabled = False
 
-                except Exception as e:
-                    st.error(f"❌ Failed to edit entry: {e}")
+ #               except Exception as e:
+ #                   st.error(f"❌ Failed to edit entry: {e}")
 
-else:
-    st.info("No entries found. Add a tree entry first to enable editing.")
+#else:
+#    st.info("No entries found. Add a tree entry first to enable editing.")
 
 st.header("4. Export Data")
 if st.session_state.entries:
