@@ -100,16 +100,16 @@ if "latitude" not in st.session_state:
 if "longitude" not in st.session_state:
     st.session_state.longitude = None
 
-st.title("\U0001F333 Tree QR Scanner")
+st.title("🌳 Tree QR Scanner")
 
 st.header("1. Capture QR Code Photo")
-captured = st.camera_input("\U0001F4F8 Take a photo of the QR code (no scanning required)")
+captured = st.camera_input("📸 Take a photo of the QR code (no scanning required)")
 if captured:
     st.session_state.qr_image = captured
-    st.success("\u2705 QR image captured.")
+    st.success("✅ QR image captured.")
 
 st.header("2. Fill Tree Details")
-st.header("\ud83d\udccd Capture Your GPS Location")
+st.header("📍 Capture Your GPS Location")
 
 if "location_requested" not in st.session_state:
     st.session_state.location_requested = False
@@ -122,25 +122,25 @@ if st.session_state.location_requested:
     if location:
         st.session_state.latitude = location["coords"]["latitude"]
         st.session_state.longitude = location["coords"]["longitude"]
-        st.success("\U0001F4E1 Location captured!")
+        st.success("📡 Location captured!")
     else:
-        st.info("\ud83d\udccd Waiting for browser permission or location data...")
+        st.info("📍 Waiting for browser permission or location data...")
 
 if st.session_state.latitude is not None and st.session_state.longitude is not None:
-    st.write(f"\ud83d\udccd Latitude: `{st.session_state.latitude}`")
-    st.write(f"\ud83d\udccd Longitude: `{st.session_state.longitude}`")
+    st.write(f"📍 Latitude: `{st.session_state.latitude}`")
+    st.write(f"📍 Longitude: `{st.session_state.longitude}`")
 else:
-    st.info("\u26a0\ufe0f No coordinates yet. Click 'Get Location' to allow access.")
+    st.info("⚠️ No coordinates yet. Click 'Get Location' to allow access.")
 
 existing_tree_names = [entry["Tree Name"] for entry in st.session_state.entries]
 
 with st.form("tree_form"):
     tree_name_suffix = st.text_input("Tree Name (Suffix only)", value="1")
     tree_custom_name = f"GGN/25/{tree_name_suffix}"
-    st.markdown(f"\ud83d\udd16 **Full Tree Name:** `{tree_custom_name}`")
+    st.markdown(f"🔖 **Full Tree Name:** `{tree_custom_name}`")
 
     if tree_custom_name in existing_tree_names:
-        st.warning("\u26a0\ufe0f This Tree Name already exists. Please enter a unique suffix.")
+        st.warning("⚠️ This Tree Name already exists. Please enter a unique suffix.")
 
     tree_name = st.selectbox("Tree Name", ["Alstonia angustiloba", "Aquilaria malaccensis", "Azadirachta indica", "Unknown sp", "Mixed sp"])
     overall_height = st.text_input("Overall Height (m)")
@@ -153,11 +153,11 @@ with st.form("tree_form"):
 
     if submitted:
         if tree_custom_name in existing_tree_names:
-            st.error("\u274c This Tree Name already exists. Please use a different suffix.")
+            st.error("❌ This Tree Name already exists. Please use a different suffix.")
         elif not all([tree_name, overall_height, dbh, canopy, tree_image_a, tree_image_b]):
-            st.error("\u274c Please complete all fields.")
+            st.error("❌ Please complete all fields.")
         elif st.session_state.latitude is None or st.session_state.longitude is None:
-            st.error("\u274c GPS location is missing. Please click 'Get Location' and try again.")
+            st.error("❌ GPS location is missing. Please click 'Get Location' and try again.")
         else:
             safe_tree_name = re.sub(r'[^a-zA-Z0-9_-]', '_', tree_custom_name)
 
@@ -183,7 +183,7 @@ with st.form("tree_form"):
 
             st.session_state.entries.append(entry)
             save_to_gsheet(entry)
-            st.success("\u2705 Entry added and images saved!")
+            st.success("✅ Entry added and images saved!")
 
             st.session_state.latitude = None
             st.session_state.longitude = None
@@ -197,11 +197,11 @@ if st.session_state.entries:
     selected_tree_name = st.selectbox("Select a tree to delete", list(delete_map.keys()))
     selected_id = delete_map[selected_tree_name]
 
-    confirm_delete = st.checkbox("\u26a0\ufe0f Confirm deletion of selected entry from Google Sheets")
+    confirm_delete = st.checkbox("⚠️ Confirm deletion of selected entry from Google Sheets")
 
     if st.button("Delete Selected Entry"):
         if not confirm_delete:
-            st.warning("\u2705 Please confirm deletion with the checkbox.")
+            st.warning("✅ Please confirm deletion with the checkbox.")
         else:
             try:
                 sheet = get_worksheet()
@@ -214,9 +214,9 @@ if st.session_state.entries:
                         sheet.delete_rows(idx)
                         break
                 st.session_state.entries = [e for e in st.session_state.entries if e["Tree Name"] != selected_id]
-                st.success(f"\u2705 Deleted entry and associated images for Tree Name: `{selected_id}`")
+                st.success(f"✅ Deleted entry and associated images for Tree Name: `{selected_id}`")
             except Exception as e:
-                st.error(f"\u274c Failed to delete entry or images: {e}")
+                st.error(f"❌ Failed to delete entry or images: {e}")
 
 st.header("4. Export Data")
 if st.session_state.entries:
