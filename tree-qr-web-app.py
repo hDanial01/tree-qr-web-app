@@ -67,7 +67,8 @@ def delete_file_from_drive(file_url):
 
 def upload_image_to_drive(image_file, filename):
     with open(filename, "wb") as f:
-        f.write(image_file.read())
+        f.write(image_file.getbuffer())
+
 
     file_list = drive.ListFile({
         'q': f"'{GOOGLE_DRIVE_FOLDER_ID}' in parents and title = '{filename}' and trashed = false"
@@ -328,14 +329,14 @@ if st.session_state.entries:
 
                     if new_image_a:
                         delete_file_from_drive(image_url_a)
-                        _, ext_a = os.path.splitext(new_image_a.name)
-                        filename_a = f"{safe_tree_name}_A{ext_a}"
+                        filename_a = f"{safe_tree_name}_A.jpg"
+
                         image_url_a = upload_image_to_drive(new_image_a, filename_a)
 
                     if new_image_b:
                         delete_file_from_drive(image_url_b)
-                        _, ext_b = os.path.splitext(new_image_b.name)
-                        filename_b = f"{safe_tree_name}_B{ext_b}"
+                        filename_a = f"{safe_tree_name}_B.jpg"
+
                         image_url_b = upload_image_to_drive(new_image_b, filename_b)
 
                     # Save updated entry
