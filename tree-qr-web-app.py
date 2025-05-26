@@ -43,7 +43,7 @@ def load_entries_from_gsheet():
                 "Tree Name": row[0], "Name": row[1],
                 "Overall Height": row[2], "DBH": row[3], "Canopy": row[4],
                 #"Image A": row[5], "Image B": row[6], 
-                "Latitude": row[7], "Longitude": row[8]
+                "Latitude": row[5], "Longitude": row[6]
             })
     return entries
 
