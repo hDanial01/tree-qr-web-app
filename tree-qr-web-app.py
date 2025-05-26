@@ -59,16 +59,25 @@ def upload_image_to_drive(image_file, filename):
     os.remove(filename)
     return f"https://drive.google.com/uc?id={file_drive['id']}"
 
+# Helper for styled headings
+def step_heading(text, size=28):
+    st.markdown(f"<div style='font-size:{size}px; font-weight:bold;'>{text}</div>", unsafe_allow_html=True)
+
 # Session state setup
-for key in ["qr_image", "image_a", "image_b", "latitude", "longitude", "location_requested", "capture_stage"]:
+for key in ["qr_image", "image_a", "image_b", "latitude", "longitude", "location_requested", "capture_stage", "session_entries"]:
     if key not in st.session_state:
-        st.session_state[key] = None if key != "capture_stage" else "qr"
+        if key == "capture_stage":
+            st.session_state[key] = "qr"
+        elif key == "session_entries":
+            st.session_state[key] = []
+        else:
+            st.session_state[key] = None
 
 st.title("🌳 Tree Registration Flow")
 
 # Step-by-step flow
 if st.session_state.capture_stage == "qr":
-    st.header("Step 1: Capture QR Code")
+    step_heading("Step 1: Capture QR Code")
     st.info("📱 Tip: Tap the camera icon to switch to the rear-facing camera for better quality.")
     qr = st.camera_input("📸 Capture QR Image")
     if qr:
@@ -77,7 +86,7 @@ if st.session_state.capture_stage == "qr":
         st.success("✅ QR image captured. Proceed to Tree Image A.")
 
 elif st.session_state.capture_stage == "image_a":
-    st.header("Step 2: Capture Tree Image A (Overall)")
+    step_heading("Step 2: Capture Tree Image A (Overall)")
     st.info("📱 Tip: Tap the camera icon to switch to the rear-facing camera for better quality.")
     image_a = st.camera_input("🌳 Capture Tree Image A")
     if image_a:
@@ -86,7 +95,7 @@ elif st.session_state.capture_stage == "image_a":
         st.success("✅ Tree Image A captured. Proceed to Tree Image B.")
 
 elif st.session_state.capture_stage == "image_b":
-    st.header("Step 3: Capture Tree Image B (Canopy)")
+    step_heading("Step 3: Capture Tree Image B (Canopy)")
     st.info("📱 Tip: Tap the camera icon to switch to the rear-facing camera for better quality.")
     image_b = st.camera_input("🍃 Capture Tree Image B")
     if image_b:
@@ -95,7 +104,7 @@ elif st.session_state.capture_stage == "image_b":
         st.success("✅ Tree Image B captured. Proceed to fill the form.")
 
 elif st.session_state.capture_stage == "form":
-    st.header("Step 4: Fill Tree Details")
+    step_heading("Step 4: Fill Tree Details")
 
     st.subheader("📍 GPS Capture")
     if st.button("📍 Get Location"):
@@ -178,25 +187,30 @@ elif st.session_state.capture_stage == "form":
                 }
 
                 save_to_gsheet(entry)
+                st.session_state.session_entries.append(entry)
+
                 st.success("🎉 Tree entry saved successfully!")
                 st.info("📸 Ready to capture the next tree — starting with the QR code.")
                 st.markdown("<script>window.scrollTo(0, 0);</script>", unsafe_allow_html=True)
 
-                # Reset state and go back to QR
                 for key in ["qr_image", "image_a", "image_b", "latitude", "longitude", "location_requested"]:
                     st.session_state[key] = None
                 st.session_state.capture_stage = "qr"
                 st.rerun()
 
-# Show entries
-st.header("📋 All Tree Entries")
-df = pd.DataFrame(load_entries_from_gsheet())
-st.dataframe(df)
+# Show session entries only
+step_heading("📋 Current Session Entries", size=24)
+if st.session_state.session_entries:
+    df_session = pd.DataFrame(st.session_state.session_entries)
+    st.dataframe(df_session)
+else:
+    st.info("No entries added in this session yet.")
 
-# Export
-st.header("⬇️ Export Data")
-if not df.empty:
-    csv_data = df.to_csv(index=False).encode("utf-8")
+# Export all data
+step_heading("⬇️ Export All Data", size=24)
+full_df = pd.DataFrame(load_entries_from_gsheet())
+if not full_df.empty:
+    csv_data = full_df.to_csv(index=False).encode("utf-8")
     st.download_button("Download CSV", csv_data, "tree_data.csv", "text/csv")
 
     if st.button("Download Excel File"):
@@ -205,7 +219,7 @@ if not df.empty:
         ws = wb.active
         headers = ["Tree Name", "Name", "Overall Height", "DBH", "Canopy", "Latitude", "Longitude"]
         ws.append(headers)
-        for entry in df.to_dict(orient="records"):
+        for entry in full_df.to_dict(orient="records"):
             ws.append([entry.get(k, "") for k in headers])
         wb.save(path)
         with open(path, "rb") as f:
