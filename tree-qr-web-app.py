@@ -1,3 +1,4 @@
+
 import streamlit as st
 import cv2
 import numpy as np
@@ -38,18 +39,18 @@ def load_entries_from_gsheet():
     rows = sheet.get_all_values()[1:]
     entries = []
     for row in rows:
-        if len(row) >= 10:
+        if len(row) >= 9:
             entries.append({
-                "ID": row[0], "Tree Name": row[1], "Name": row[2],
-                "Overall Height": row[3], "DBH": row[4], "Canopy": row[5],
-                "Image A": row[6], "Image B": row[7], "Latitude": row[8], "Longitude": row[9]
+                "Tree Name": row[0], "Name": row[1],
+                "Overall Height": row[2], "DBH": row[3], "Canopy": row[4],
+                "Image A": row[5], "Image B": row[6], "Latitude": row[7], "Longitude": row[8]
             })
     return entries
 
 def save_to_gsheet(entry):
     sheet = get_worksheet()
     sheet.append_row([
-        entry["ID"], entry["Tree Name"], entry["Name"],
+        entry["Tree Name"], entry["Name"],
         entry["Overall Height"], entry["DBH"], entry["Canopy"],
         entry["Image A"], entry["Image B"],
         entry.get("Latitude", ""), entry.get("Longitude", "")
@@ -69,7 +70,6 @@ def upload_image_to_drive(image_file, filename):
     with open(filename, "wb") as f:
         f.write(image_file.read())
 
-    # Remove old file with same name
     file_list = drive.ListFile({
         'q': f"'{GOOGLE_DRIVE_FOLDER_ID}' in parents and title = '{filename}' and trashed = false"
     }).GetList()
@@ -88,10 +88,9 @@ def upload_image_to_drive(image_file, filename):
     os.remove(filename)
     return f"https://drive.google.com/uc?id={file_drive['id']}"
 
-# Session state
 if "entries" not in st.session_state:
     st.session_state.entries = load_entries_from_gsheet()
-    required_keys = ["ID", "Tree Name", "Name", "Overall Height", "DBH", "Canopy",
+    required_keys = ["Tree Name", "Name", "Overall Height", "DBH", "Canopy",
                      "Image A", "Image B", "Latitude", "Longitude"]
     for entry in st.session_state.entries:
         for key in required_keys:
@@ -104,14 +103,12 @@ if "longitude" not in st.session_state:
 
 st.title("\U0001F333 Tree QR Photo Uploader")
 
-# QR Photo Capture (no scanning)
 st.header("1. Capture QR Code Photo")
 captured_qr = st.camera_input("\U0001F4F8 Take a photo of the QR code (no scanning required)")
 if captured_qr:
     st.session_state.qr_image = captured_qr
     st.success("\u2705 QR image captured.")
 
-# Tree data entry
 st.header("2. Fill Tree Details")
 st.header("\U0001F4CD Capture Your GPS Location")
 
@@ -135,12 +132,10 @@ st.write(f"\U0001F4CD Latitude: `{st.session_state.latitude}`")
 st.write(f"\U0001F4CD Longitude: `{st.session_state.longitude}`")
 
 with st.form("tree_form"):
-    id_val = st.text_input("Tree ID")
     tree_name_suffix = st.text_input("Tree Name (Suffix only)", value="1")
     tree_custom_name = f"GGN/25/{tree_name_suffix}"
     st.markdown(f"\U0001F516 **Full Tree Name:** `{tree_custom_name}`")
 
-    # List of species (make sure it's defined here or globally)
     tree_names = [
         "Alstonia angustiloba", "Aquilaria malaccensis", "Azadirachta indica",
         "Baringtonia acutangula", "Buchanania arborescens", "Callophyllum inophyllum",
@@ -170,7 +165,7 @@ with st.form("tree_form"):
 
     submitted = st.form_submit_button("Add Entry")
     if submitted:
-        if not all([id_val, tree_name, overall_height, dbh, canopy, tree_image_a, tree_image_b]):
+        if not all([tree_name, overall_height, dbh, canopy, tree_image_a, tree_image_b]):
             st.error("\u274C Please complete all fields.")
         elif st.session_state.latitude is None or st.session_state.longitude is None:
             st.error("\u274C GPS location is missing. Please click 'Get Location' and try again.")
@@ -192,7 +187,6 @@ with st.form("tree_form"):
                 st.success(f"\U0001F4F7 QR image saved as {qr_filename}")
 
             entry = {
-                "ID": id_val,
                 "Tree Name": tree_custom_name,
                 "Name": tree_name,
                 "Overall Height": overall_height,
