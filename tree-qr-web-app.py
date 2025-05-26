@@ -240,7 +240,7 @@ st.subheader("📂 Edit Entry")
 
 if st.session_state.entries:
     edit_map = {entry["Tree Name"]: entry for entry in st.session_state.entries}
-    selected_edit_name = st.selectbox("Select a tree to edit", list(edit_map.keys()))
+    selected_edit_name = st.selectbox("Tree Names", list(edit_map.keys()))
     entry_to_edit = edit_map[selected_edit_name]
 
     if "edit_enabled" not in st.session_state:
@@ -252,7 +252,7 @@ if st.session_state.entries:
     if st.session_state.edit_enabled:
         with st.form("edit_form"):
             id_val = st.text_input("Tree ID", value=entry_to_edit["ID"])
-            tree_name = st.text_input("Tree Name", value=entry_to_edit["Tree Name"])
+            tree_name = st.text_input("Tree Names", value=entry_to_edit["Tree Name"])
             species_name = st.text_input("Species Name", value=entry_to_edit["Name"])
             overall_height = st.text_input("Overall Height (m)", value=entry_to_edit["Overall Height"])
             dbh = st.text_input("DBH (cm)", value=entry_to_edit["DBH"])
