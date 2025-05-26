@@ -78,7 +78,8 @@ st.title("🌳 Tree Registration Flow")
 # Step-by-step flow
 if st.session_state.capture_stage == "qr":
     step_heading("Step 1: Capture QR Code")
-    st.info("📱 Tip: Tap the camera icon to switch to the rear-facing camera for better quality.")
+    st.info("Clear photo to continue to next phase")
+    st.info("If wrong image is captured, refresh the app")
     qr = st.camera_input("📸 Capture QR Image")
     if qr:
         st.session_state.qr_image = qr
@@ -87,7 +88,8 @@ if st.session_state.capture_stage == "qr":
 
 elif st.session_state.capture_stage == "image_a":
     step_heading("Step 2: Capture Tree Image A (Overall)")
-    st.info("📱 Tip: Tap the camera icon to switch to the rear-facing camera for better quality.")
+    st.info("Clear photo to continue to next phase")
+    st.info("If wrong image is captured, refresh the app")
     image_a = st.camera_input("🌳 Capture Tree Image A")
     if image_a:
         st.session_state.image_a = image_a
@@ -96,7 +98,8 @@ elif st.session_state.capture_stage == "image_a":
 
 elif st.session_state.capture_stage == "image_b":
     step_heading("Step 3: Capture Tree Image B (Canopy)")
-    st.info("📱 Tip: Tap the camera icon to switch to the rear-facing camera for better quality.")
+    st.info("Clear photo to continue to next phase")
+    st.info("If wrong image is captured, refresh the app")
     image_b = st.camera_input("🍃 Capture Tree Image B")
     if image_b:
         st.session_state.image_b = image_b
@@ -106,7 +109,6 @@ elif st.session_state.capture_stage == "image_b":
 elif st.session_state.capture_stage == "form":
     step_heading("Step 4: Fill Tree Details")
 
-    st.subheader("📍 GPS Capture")
     if st.button("📍 Get Location"):
         st.session_state.location_requested = True
 
@@ -190,7 +192,6 @@ elif st.session_state.capture_stage == "form":
                 st.session_state.session_entries.append(entry)
 
                 st.success("🎉 Tree entry saved successfully!")
-                st.info("📸 Ready to capture the next tree — starting with the QR code.")
                 st.markdown("<script>window.scrollTo(0, 0);</script>", unsafe_allow_html=True)
 
                 for key in ["qr_image", "image_a", "image_b", "latitude", "longitude", "location_requested"]:
@@ -199,7 +200,7 @@ elif st.session_state.capture_stage == "form":
                 st.rerun()
 
 # Show session entries only
-step_heading("📋 Current Session Entries", size=24)
+step_heading("Current Session Entries", size=24)
 if st.session_state.session_entries:
     df_session = pd.DataFrame(st.session_state.session_entries)
     st.dataframe(df_session)
@@ -207,7 +208,7 @@ else:
     st.info("No entries added in this session yet.")
 
 # Export all data
-step_heading("⬇️ Export All Data", size=24)
+step_heading("⬇Export All Data", size=24)
 full_df = pd.DataFrame(load_entries_from_gsheet())
 if not full_df.empty:
     csv_data = full_df.to_csv(index=False).encode("utf-8")
