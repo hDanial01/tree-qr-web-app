@@ -142,7 +142,25 @@ with st.form("tree_form"):
     if tree_custom_name in existing_tree_names:
         st.warning("⚠️ This Tree Name already exists. Please enter a unique suffix.")
 
-    tree_name = st.selectbox("Tree Name", ["Alstonia angustiloba", "Aquilaria malaccensis", "Azadirachta indica", "Unknown sp", "Mixed sp"])
+    tree_name = st.selectbox("Tree Name", [
+        "Alstonia angustiloba", "Aquilaria malaccensis", "Azadirachta indica",
+        "Baringtonia acutangula", "Buchanania arborescens", "Callophyllum inophyllum",
+        "Cerbera odollam rubra", "Cinnamomum iners", "Coccoloba uvifera",
+        "Cratoxylum chochinchinensis", "Cratoxylum cochichinensis", "Cratoxylum formosum",
+        "Dillenia indica", "Diospyros blancoi", "Diptercarpus baudi", "Diptercarpus gracilis",
+        "Dyera costulata", "Eleocarpus grandiflorus", "Ficus lyrate",
+        "Filicium decipiens", "Garcinia hombroniana", "Gardenia carinata",
+        "Heteropanax fragrans", "Hopea ferrea", "Hopea odorata",
+        "Leptospermum brachyandrum", "Licuala grandis", "Maniltoa browneoides",
+        "Mesua ferrea", "Michelia champaka", "Milingtonia hortensis",
+        "Millettia pinnata", "Mimusops elengi", "Pentaspadon monteylii",
+        "Podocarpus macrophyllus", "Podocarpus polystachyus", "Pometia pinnata",
+        "Saraca thaipingensis", "Shorea roxburghii", "Spathodea campanulata",
+        "Sterculia foetida", "Sterculia paviflora", "Sygzium polyanthum",
+        "Syzgium grande", "Syzgium spicata", "Tabebuia argentea",
+        "Tabebuia rosea", "Terminalia calamansanai", "Terminalia catappa",
+        "Tristania obovata", "Tristaniopsis whiteana", "Unknown sp", "Mixed sp"
+    ])
     overall_height = st.text_input("Overall Height (m)")
     dbh = st.text_input("DBH (cm)")
     canopy = st.text_input("Canopy Diameter (cm)")
