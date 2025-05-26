@@ -69,6 +69,7 @@ st.title("🌳 Tree Registration Flow")
 # Step-by-step flow
 if st.session_state.capture_stage == "qr":
     st.header("Step 1: Capture QR Code")
+    st.info("📱 Tip: Tap the camera icon to switch to the rear-facing camera for better quality.")
     qr = st.camera_input("📸 Capture QR Image")
     if qr:
         st.session_state.qr_image = qr
@@ -77,6 +78,7 @@ if st.session_state.capture_stage == "qr":
 
 elif st.session_state.capture_stage == "image_a":
     st.header("Step 2: Capture Tree Image A (Overall)")
+    st.info("📱 Tip: Tap the camera icon to switch to the rear-facing camera for better quality.")
     image_a = st.camera_input("🌳 Capture Tree Image A")
     if image_a:
         st.session_state.image_a = image_a
@@ -85,6 +87,7 @@ elif st.session_state.capture_stage == "image_a":
 
 elif st.session_state.capture_stage == "image_b":
     st.header("Step 3: Capture Tree Image B (Canopy)")
+    st.info("📱 Tip: Tap the camera icon to switch to the rear-facing camera for better quality.")
     image_b = st.camera_input("🍃 Capture Tree Image B")
     if image_b:
         st.session_state.image_b = image_b
@@ -175,8 +178,10 @@ elif st.session_state.capture_stage == "form":
 
                 save_to_gsheet(entry)
                 st.success("🎉 Tree entry saved successfully!")
+                st.info("📸 Ready to capture the next tree — starting with the QR code.")
+                st.markdown("<script>window.scrollTo(0, 0);</script>", unsafe_allow_html=True)
 
-                # Reset session state
+                # Reset state and go back to QR
                 for key in ["qr_image", "image_a", "image_b", "latitude", "longitude", "location_requested"]:
                     st.session_state[key] = None
                 st.session_state.capture_stage = "qr"
