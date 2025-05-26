@@ -99,50 +99,40 @@ if "latitude" not in st.session_state:
     st.session_state.latitude = None
 if "longitude" not in st.session_state:
     st.session_state.longitude = None
+
 if "qr_image" not in st.session_state:
     st.session_state.qr_image = None
 if "tree_image_a" not in st.session_state:
     st.session_state.tree_image_a = None
 if "tree_image_b" not in st.session_state:
     st.session_state.tree_image_b = None
-if "step" not in st.session_state:
-    st.session_state.step = "qr"
 
 st.title("🌳 Tree QR Scanner")
 
-# Step-by-step camera input
-if st.session_state.step == "qr":
+# Step-by-step camera flow
+if st.session_state.qr_image is None:
     st.header("Step 1: Capture QR Code")
     qr = st.camera_input("📸 Take a photo of the QR code")
     if qr:
         st.session_state.qr_image = qr
-        st.session_state.step = "tree_a"
         st.success("✅ QR image captured.")
 
-elif st.session_state.step == "tree_a":
+elif st.session_state.tree_image_a is None:
     st.header("Step 2: Capture Tree Image (Overall)")
     tree_a = st.camera_input("🌲 Capture Tree Image A")
     if tree_a:
         st.session_state.tree_image_a = tree_a
-        st.session_state.step = "tree_b"
         st.success("✅ Tree Image A captured.")
 
-elif st.session_state.step == "tree_b":
+elif st.session_state.tree_image_b is None:
     st.header("Step 3: Capture Tree Image (Canopy)")
     tree_b = st.camera_input("🌳 Capture Tree Image B")
     if tree_b:
         st.session_state.tree_image_b = tree_b
-        st.session_state.step = "form"
         st.success("✅ Tree Image B captured.")
 
-if st.button("🔁 Restart Image Capture"):
-    st.session_state.step = "qr"
-    st.session_state.qr_image = None
-    st.session_state.tree_image_a = None
-    st.session_state.tree_image_b = None
-
-if st.session_state.step == "form":
-    st.header("📍 Capture Your GPS Location")
+else:
+    st.header("Step 4: Enter Tree Details")
 
     if "location_requested" not in st.session_state:
         st.session_state.location_requested = False
@@ -203,8 +193,8 @@ if st.session_state.step == "form":
         if submitted:
             if tree_custom_name in existing_tree_names:
                 st.error("❌ This Tree Name already exists. Please use a different suffix.")
-            elif not all([tree_name, overall_height, dbh, canopy, st.session_state.tree_image_a, st.session_state.tree_image_b]):
-                st.error("❌ Please complete all fields and capture both tree images.")
+            elif not all([tree_name, overall_height, dbh, canopy]):
+                st.error("❌ Please complete all fields.")
             elif st.session_state.latitude is None or st.session_state.longitude is None:
                 st.error("❌ GPS location is missing. Please click 'Get Location' and try again.")
             else:
@@ -224,7 +214,9 @@ if st.session_state.step == "form":
                     file_drive.SetContentFile(qr_filename)
                     file_drive.Upload()
                     file_drive.InsertPermission({
-                        'type': 'anyone', 'value': 'anyone', 'role': 'reader'
+                        'type': 'anyone',
+                        'value': 'anyone',
+                        'role': 'reader'
                     })
                     os.remove(qr_filename)
                     st.success(f"📸 QR image saved as `{qr_filename}`")
@@ -245,12 +237,12 @@ if st.session_state.step == "form":
                 save_to_gsheet(entry)
                 st.success("✅ Entry added and images saved!")
 
+                # Reset session state
                 st.session_state.latitude = None
                 st.session_state.longitude = None
                 st.session_state.qr_image = None
                 st.session_state.tree_image_a = None
                 st.session_state.tree_image_b = None
-                st.session_state.step = "qr"
 
 if st.session_state.entries:
     st.header("📋 Current Entries")
