@@ -196,7 +196,7 @@ with st.form("tree_form"):
             # Upload the QR image if available
             if "qr_image" in st.session_state and st.session_state.qr_image is not None:
                 qr_filename = f"GGN_25_{tree_name_suffix}_QR.jpg"
-               with open(qr_filename, "wb") as f:
+                with open(qr_filename, "wb") as f:
                     f.write(st.session_state.qr_image.getbuffer())
                 file_drive = drive.CreateFile({"title": qr_filename, "parents": [{"id": GOOGLE_DRIVE_FOLDER_ID}]})
                 file_drive.SetContentFile(qr_filename)
