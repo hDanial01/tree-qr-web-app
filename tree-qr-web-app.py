@@ -95,8 +95,9 @@ elif st.session_state.capture_stage == "image_b":
         st.success("✅ Tree Image B captured. Proceed to fill the form.")
 
 elif st.session_state.capture_stage == "form":
-    st.header("Step 4: GPS Capture")
+    st.header("Step 4: Fill Tree Details")
 
+    st.subheader("📍 GPS Capture")
     if st.button("📍 Get Location"):
         st.session_state.location_requested = True
 
@@ -113,7 +114,7 @@ elif st.session_state.capture_stage == "form":
     else:
         st.info("Click 'Get Location' to capture GPS coordinates.")
 
-    st.header("Step 5: Fill Tree Details")
+    st.subheader("📝 Tree Details")
 
     entries = load_entries_from_gsheet()
     existing_names = [e["Tree Name"] for e in entries]
@@ -185,6 +186,7 @@ elif st.session_state.capture_stage == "form":
                 for key in ["qr_image", "image_a", "image_b", "latitude", "longitude", "location_requested"]:
                     st.session_state[key] = None
                 st.session_state.capture_stage = "qr"
+                st.rerun()
 
 # Show entries
 st.header("📋 All Tree Entries")
