@@ -161,8 +161,8 @@ with st.form("tree_form"):
         "Tabebuia rosea", "Terminalia calamansanai", "Terminalia catappa",
         "Tristania obovata", "Tristaniopsis whiteana", "Unknown sp", "Mixed sp"
     ])
-    overall_height = st.text_input("Overall Height (m)")
-    dbh = st.text_input("DBH (cm)")
+    overall_height = st.selectbox("Overall Height (m)", ["1", "2", "3", "4", "5", "6", "7"])
+    dbh = st.selectbox("DBH (cm)", ["2, 3, 4, 5, 6, 7, 8, 9"])
     canopy = st.text_input("Canopy Diameter (cm)")
     tree_image_a = st.file_uploader("Upload Tree Image (Overall)", type=["jpg", "jpeg", "png"], key="tree_a")
     tree_image_b = st.file_uploader("Upload Tree Image (Canopy)", type=["jpg", "jpeg", "png"], key="tree_b")
@@ -273,7 +273,10 @@ if st.session_state.entries:
             )
 
             overall_height = st.text_input("Overall Height (m)", value=entry_to_edit["Overall Height"])
+            overall_height = ["1", "2", "3", "4", "5", "6", "7"]
+            
             dbh = st.text_input("DBH (cm)", value=entry_to_edit["DBH"])
+            dbh = ["2, 3, 4, 5, 6, 7, 8, 9"]
             canopy = st.text_input("Canopy Diameter (cm)", value=entry_to_edit["Canopy"])
 
             new_image_a = st.file_uploader("Replace Image A (optional)", type=["jpg", "jpeg", "png"])
