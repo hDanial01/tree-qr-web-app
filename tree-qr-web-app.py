@@ -105,29 +105,13 @@ if "longitude" not in st.session_state:
 
 st.title("\U0001F333 Tree QR Scanner")
 
-# QR Capture
-st.header("1. Capture QR Code (Camera Input)")
-captured = st.camera_input("\U0001F4F8 Take a photo of the QR code")
 
+# QR Photo Capture (no scanning)
+st.header("1. Capture QR Code Photo")
+captured = st.camera_input("📸 Take a photo of the QR code (no scanning required)")
 if captured:
-    file_bytes = np.asarray(bytearray(captured.read()), dtype=np.uint8)
-    img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-    detector = cv2.QRCodeDetector()
-    data, bbox, _ = detector.detectAndDecode(img)
-
-    if data:
-        latest_entries = load_entries_from_gsheet()
-        existing_ids = [entry["ID"] for entry in latest_entries]
-
-        if data in existing_ids:
-            st.error(f"\u274C This QR Code (ID: '{data}') already exists. Please scan a unique QR code.")
-            st.session_state.qr_result = ""
-        else:
-            st.success(f"\u2705 QR Code Found and ID is unique: {data}")
-            st.session_state.qr_result = data
-    else:
-        st.error("\u274C No QR code detected.")
-
+    st.session_state.qr_image = captured
+    st.success("✅ QR image captured.")
 # Tree data entry
 st.header("2. Fill Tree Details")
 st.header("\U0001F4CD Capture Your GPS Location")
@@ -158,7 +142,7 @@ else:
     existing_tree_names = [entry["Tree Name"] for entry in st.session_state.entries]
 
     with st.form("tree_form"):
-        id_val = st.text_input("Tree ID", value=st.session_state.qr_result)
+        id_val = st.text_input("Tree ID")
         tree_name_suffix = st.text_input("Tree Name (Suffix only)", value="1")
         tree_custom_name = f"GGN/25/{tree_name_suffix}"
         st.markdown(f"\U0001F516 **Full Tree Name:** `{tree_custom_name}`")
