@@ -146,8 +146,8 @@ with st.form("tree_form"):
     overall_height = st.text_input("Overall Height (m)")
     dbh = st.text_input("DBH (cm)")
     canopy = st.text_input("Canopy Diameter (cm)")
-    tree_image_a = st.file_uploader("Upload Tree Image (Overall)", type=["jpg", "jpeg", "png"], key="tree_a")
-    tree_image_b = st.file_uploader("Upload Tree Image (Canopy)", type=["jpg", "jpeg", "png"], key="tree_b")
+    tree_image_a = st.camera_input("📷 Capture Tree Image (Overall)")
+    tree_image_b = st.camera_input("📷 Capture Tree Image (Canopy)")
 
     submitted = st.form_submit_button("Add Entry")
 
