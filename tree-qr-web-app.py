@@ -1,4 +1,3 @@
-
 import streamlit as st
 import cv2
 import numpy as np
@@ -39,9 +38,8 @@ def load_entries_from_gsheet():
     rows = sheet.get_all_values()[1:]
     entries = []
     for row in rows:
-        if len(row) >= 10:
+        if len(row) >= 9:
             entries.append({
-                #"ID": row[0], 
                 "Tree Name": row[0], "Name": row[1],
                 "Overall Height": row[2], "DBH": row[3], "Canopy": row[4],
                 "Image A": row[5], "Image B": row[6], "Latitude": row[7], "Longitude": row[8]
@@ -51,7 +49,6 @@ def load_entries_from_gsheet():
 def save_to_gsheet(entry):
     sheet = get_worksheet()
     sheet.append_row([
-        # entry["ID"], 
         entry["Tree Name"], entry["Name"],
         entry["Overall Height"], entry["DBH"], entry["Canopy"],
         entry["Image A"], entry["Image B"],
@@ -93,8 +90,7 @@ def upload_image_to_drive(image_file, filename):
 # Session state setup
 if "entries" not in st.session_state:
     st.session_state.entries = load_entries_from_gsheet()
-    required_keys = ["Tree Name", "Name", "Overall Height", "DBH", "Canopy",
-                     "Image A", "Image B", "Latitude", "Longitude"]
+    required_keys = ["Tree Name", "Name", "Overall Height", "DBH", "Canopy", "Image A", "Image B", "Latitude", "Longitude"]
     for entry in st.session_state.entries:
         for key in required_keys:
             entry.setdefault(key, "")
@@ -104,18 +100,16 @@ if "latitude" not in st.session_state:
 if "longitude" not in st.session_state:
     st.session_state.longitude = None
 
-st.title("🌳 Tree QR Scanner")
+st.title("\U0001F333 Tree QR Scanner")
 
-# QR Photo Capture (no scanning)
 st.header("1. Capture QR Code Photo")
-captured = st.camera_input("📸 Take a photo of the QR code (no scanning required)")
+captured = st.camera_input("\U0001F4F8 Take a photo of the QR code (no scanning required)")
 if captured:
     st.session_state.qr_image = captured
-    st.success("✅ QR image captured.")
+    st.success("\u2705 QR image captured.")
 
-# Tree data entry
 st.header("2. Fill Tree Details")
-st.header("📍 Capture Your GPS Location")
+st.header("\ud83d\udccd Capture Your GPS Location")
 
 if "location_requested" not in st.session_state:
     st.session_state.location_requested = False
@@ -128,47 +122,27 @@ if st.session_state.location_requested:
     if location:
         st.session_state.latitude = location["coords"]["latitude"]
         st.session_state.longitude = location["coords"]["longitude"]
-        st.success("📡 Location captured!")
+        st.success("\U0001F4E1 Location captured!")
     else:
-        st.info("📍 Waiting for browser permission or location data...")
+        st.info("\ud83d\udccd Waiting for browser permission or location data...")
 
 if st.session_state.latitude is not None and st.session_state.longitude is not None:
-    st.write(f"📍 Latitude: `{st.session_state.latitude}`")
-    st.write(f"📍 Longitude: `{st.session_state.longitude}`")
+    st.write(f"\ud83d\udccd Latitude: `{st.session_state.latitude}`")
+    st.write(f"\ud83d\udccd Longitude: `{st.session_state.longitude}`")
 else:
-    st.info("⚠️ No coordinates yet. Click 'Get Location' to allow access.")
+    st.info("\u26a0\ufe0f No coordinates yet. Click 'Get Location' to allow access.")
 
 existing_tree_names = [entry["Tree Name"] for entry in st.session_state.entries]
 
 with st.form("tree_form"):
     tree_name_suffix = st.text_input("Tree Name (Suffix only)", value="1")
     tree_custom_name = f"GGN/25/{tree_name_suffix}"
-    st.markdown(f"🔖 **Full Tree Name:** `{tree_custom_name}`")
+    st.markdown(f"\ud83d\udd16 **Full Tree Name:** `{tree_custom_name}`")
 
     if tree_custom_name in existing_tree_names:
-        st.warning("⚠️ This Tree Name already exists. Please enter a unique suffix.")
+        st.warning("\u26a0\ufe0f This Tree Name already exists. Please enter a unique suffix.")
 
-    tree_names = [
-        "Alstonia angustiloba", "Aquilaria malaccensis", "Azadirachta indica",
-        "Baringtonia acutangula", "Buchanania arborescens", "Callophyllum inophyllum",
-        "Cerbera odollam rubra", "Cinnamomum iners", "Coccoloba uvifera",
-        "Cratoxylum chochinchinensis", "Cratoxylum cochichinensis", "Cratoxylum formosum",
-        "Dillenia indica", "Diospyros blancoi", "Diptercarpus baudi", "Diptercarpus gracilis",
-        "Dyera costulata", "Eleocarpus grandiflorus", "Ficus lyrate",
-        "Filicium decipiens", "Garcinia hombroniana", "Gardenia carinata",
-        "Heteropanax fragrans", "Hopea ferrea", "Hopea odorata",
-        "Leptospermum brachyandrum", "Licuala grandis", "Maniltoa browneoides",
-        "Mesua ferrea", "Michelia champaka", "Milingtonia hortensis",
-        "Millettia pinnata", "Mimusops elengi", "Pentaspadon monteylii",
-        "Podocarpus macrophyllus", "Podocarpus polystachyus", "Pometia pinnata",
-        "Saraca thaipingensis", "Shorea roxburghii", "Spathodea campanulata",
-        "Sterculia foetida", "Sterculia paviflora", "Sygzium polyanthum",
-        "Syzgium grande", "Syzgium spicata", "Tabebuia argentea",
-        "Tabebuia rosea", "Terminalia calamansanai", "Terminalia catappa",
-        "Tristania obovata", "Tristaniopsis whiteana", "Unknown sp", "Mixed sp"
-    ]
-
-    tree_name = st.selectbox("Tree Name", tree_names)
+    tree_name = st.selectbox("Tree Name", ["Alstonia angustiloba", "Aquilaria malaccensis", "Azadirachta indica", "Unknown sp", "Mixed sp"])
     overall_height = st.text_input("Overall Height (m)")
     dbh = st.text_input("DBH (cm)")
     canopy = st.text_input("Canopy Diameter (cm)")
@@ -179,11 +153,11 @@ with st.form("tree_form"):
 
     if submitted:
         if tree_custom_name in existing_tree_names:
-            st.error("❌ This Tree Name already exists. Please use a different suffix.")
-        elif not all([id_val, tree_name, overall_height, dbh, canopy, tree_image_a, tree_image_b]):
-            st.error("❌ Please complete all fields.")
+            st.error("\u274c This Tree Name already exists. Please use a different suffix.")
+        elif not all([tree_name, overall_height, dbh, canopy, tree_image_a, tree_image_b]):
+            st.error("\u274c Please complete all fields.")
         elif st.session_state.latitude is None or st.session_state.longitude is None:
-            st.error("❌ GPS location is missing. Please click 'Get Location' and try again.")
+            st.error("\u274c GPS location is missing. Please click 'Get Location' and try again.")
         else:
             safe_tree_name = re.sub(r'[^a-zA-Z0-9_-]', '_', tree_custom_name)
 
@@ -194,22 +168,6 @@ with st.form("tree_form"):
             _, ext_b = os.path.splitext(tree_image_b.name)
             filename_b = f"{safe_tree_name}_B{ext_b}"
             image_url_b = upload_image_to_drive(tree_image_b, filename_b)
-            # Upload the QR image if available
-            if "qr_image" in st.session_state and st.session_state.qr_image is not None:
-                qr_filename = f"GGN_25_{tree_name_suffix}_QR.jpg"
-                with open(qr_filename, "wb") as f:
-                    f.write(st.session_state.qr_image.getbuffer())
-                file_drive = drive.CreateFile({"title": qr_filename, "parents": [{"id": GOOGLE_DRIVE_FOLDER_ID}]})
-                file_drive.SetContentFile(qr_filename)
-                file_drive.Upload()
-                file_drive.InsertPermission({
-                'type': 'anyone',
-                'value': 'anyone',
-                'role': 'reader'
-                })
-                os.remove(qr_filename)
-                st.success(f"📸 QR image saved as {qr_filename}")
-
 
             entry = {
                 "Tree Name": tree_custom_name,
@@ -225,28 +183,25 @@ with st.form("tree_form"):
 
             st.session_state.entries.append(entry)
             save_to_gsheet(entry)
-            st.success("✅ Entry added and images saved!")
+            st.success("\u2705 Entry added and images saved!")
 
             st.session_state.latitude = None
             st.session_state.longitude = None
 
-# Display table
 if st.session_state.entries:
     st.header("3. Current Entries")
     df = pd.DataFrame(st.session_state.entries)
     st.dataframe(df)
 
-    # Map Tree Name to its corresponding ID (assumes Tree Name is unique)
-    delete_map = {entry["Tree Name"]: entry["ID"] for entry in st.session_state.entries}
+    delete_map = {entry["Tree Name"]: entry["Tree Name"] for entry in st.session_state.entries}
     selected_tree_name = st.selectbox("Select a tree to delete", list(delete_map.keys()))
     selected_id = delete_map[selected_tree_name]
 
-
-    confirm_delete = st.checkbox("⚠️ Confirm deletion of selected entry from Google Sheets")
+    confirm_delete = st.checkbox("\u26a0\ufe0f Confirm deletion of selected entry from Google Sheets")
 
     if st.button("Delete Selected Entry"):
         if not confirm_delete:
-            st.warning("✅ Please confirm deletion with the checkbox.")
+            st.warning("\u2705 Please confirm deletion with the checkbox.")
         else:
             try:
                 sheet = get_worksheet()
@@ -254,128 +209,17 @@ if st.session_state.entries:
                 for idx, row in enumerate(all_rows[1:], start=2):
                     if row and row[0] == selected_id:
                         if len(row) >= 8:
-                            delete_file_from_drive(row[6])  # Image A
-                            delete_file_from_drive(row[7])  # Image B
+                            delete_file_from_drive(row[5])
+                            delete_file_from_drive(row[6])
                         sheet.delete_rows(idx)
                         break
-                st.session_state.entries = [e for e in st.session_state.entries if e["ID"] != selected_id]
-                st.success(f"✅ Deleted entry and associated images for ID: `{selected_id}`")
+                st.session_state.entries = [e for e in st.session_state.entries if e["Tree Name"] != selected_id]
+                st.success(f"\u2705 Deleted entry and associated images for Tree Name: `{selected_id}`")
             except Exception as e:
-                st.error(f"❌ Failed to delete entry or images: {e}")
+                st.error(f"\u274c Failed to delete entry or images: {e}")
 
-# Edit entry
-st.subheader("📂 Edit Entry")
-
+st.header("4. Export Data")
 if st.session_state.entries:
-    # Map Tree Name to its corresponding entry
-    edit_map = {entry["Tree Name"]: entry for entry in st.session_state.entries}
-    
-    selected_edit_name = st.selectbox("Select a tree to edit", list(edit_map.keys()))
-    entry_to_edit = edit_map[selected_edit_name]
-
-    if "edit_enabled" not in st.session_state:
-        st.session_state.edit_enabled = False
-
-    if st.button("✏️ Enable Edit Mode"):
-        st.session_state.edit_enabled = True
-
-    if st.session_state.edit_enabled:
-        with st.form("edit_form"):
-            id_val = st.text_input("Tree ID", value=entry_to_edit["ID"])
-            tree_name = st.text_input("Tree Name", value=entry_to_edit["Tree Name"])
-
-            # List of species (make sure it's defined here or globally)
-            tree_names = [
-                "Alstonia angustiloba", "Aquilaria malaccensis", "Azadirachta indica",
-                "Baringtonia acutangula", "Buchanania arborescens", "Callophyllum inophyllum",
-                "Cerbera odollam rubra", "Cinnamomum iners", "Coccoloba uvifera",
-                "Cratoxylum chochinchinensis", "Cratoxylum cochichinensis", "Cratoxylum formosum",
-                "Dillenia indica", "Diospyros blancoi", "Diptercarpus baudi", "Diptercarpus gracilis",
-                "Dyera costulata", "Eleocarpus grandiflorus", "Ficus lyrate",
-                "Filicium decipiens", "Garcinia hombroniana", "Gardenia carinata",
-                "Heteropanax fragrans", "Hopea ferrea", "Hopea odorata",
-                "Leptospermum brachyandrum", "Licuala grandis", "Maniltoa browneoides",
-                "Mesua ferrea", "Michelia champaka", "Milingtonia hortensis",
-                "Millettia pinnata", "Mimusops elengi", "Pentaspadon monteylii",
-                "Podocarpus macrophyllus", "Podocarpus polystachyus", "Pometia pinnata",
-                "Saraca thaipingensis", "Shorea roxburghii", "Spathodea campanulata",
-                "Sterculia foetida", "Sterculia paviflora", "Sygzium polyanthum",
-                "Syzgium grande", "Syzgium spicata", "Tabebuia argentea",
-                "Tabebuia rosea", "Terminalia calamansanai", "Terminalia catappa",
-                "Tristania obovata", "Tristaniopsis whiteana", "Unknown sp", "Mixed sp"
-            ]
-
-            species_name = st.selectbox(
-                "Species Name", tree_names,
-                index=tree_names.index(entry_to_edit["Name"]) if entry_to_edit["Name"] in tree_names else 0
-            )
-
-            overall_height = st.text_input("Overall Height (m)", value=entry_to_edit["Overall Height"])
-            dbh = st.text_input("DBH (cm)", value=entry_to_edit["DBH"])
-            canopy = st.text_input("Canopy Diameter (cm)", value=entry_to_edit["Canopy"])
-
-            new_image_a = st.file_uploader("Replace Image A (optional)", type=["jpg", "jpeg", "png"])
-            new_image_b = st.file_uploader("Replace Image B (optional)", type=["jpg", "jpeg", "png"])
-
-            edit_submit = st.form_submit_button("Save Changes")
-
-            if edit_submit:
-                try:
-                    # Delete old row in Google Sheets
-                    sheet = get_worksheet()
-                    all_rows = sheet.get_all_values()
-                    for idx, row in enumerate(all_rows[1:], start=2):
-                        if row and row[0] == entry_to_edit["ID"]:
-                            sheet.delete_rows(idx)
-                            break
-
-                    # Replace images if new ones are uploaded
-                    safe_tree_name = re.sub(r'[^a-zA-Z0-9_-]', '_', tree_name)
-
-                    image_url_a = entry_to_edit["Image A"]
-                    image_url_b = entry_to_edit["Image B"]
-
-                    if new_image_a:
-                        delete_file_from_drive(image_url_a)
-                        _, ext_a = os.path.splitext(new_image_a.name)
-                        filename_a = f"{safe_tree_name}_A{ext_a}"
-                        image_url_a = upload_image_to_drive(new_image_a, filename_a)
-
-                    if new_image_b:
-                        delete_file_from_drive(image_url_b)
-                        _, ext_b = os.path.splitext(new_image_b.name)
-                        filename_b = f"{safe_tree_name}_B{ext_b}"
-                        image_url_b = upload_image_to_drive(new_image_b, filename_b)
-
-                    # Save updated entry
-                    updated_entry = {
-                        "ID": id_val,
-                        "Tree Name": tree_name,
-                        "Name": species_name,
-                        "Overall Height": overall_height,
-                        "DBH": dbh,
-                        "Canopy": canopy,
-                        "Image A": image_url_a,
-                        "Image B": image_url_b,
-                        "Latitude": entry_to_edit["Latitude"],
-                        "Longitude": entry_to_edit["Longitude"]
-                    }
-
-                    save_to_gsheet(updated_entry)
-                    st.session_state.entries = load_entries_from_gsheet()
-                    st.success(f"✅ Updated entry: {tree_name}")
-                    st.session_state.edit_enabled = False
-
-                except Exception as e:
-                    st.error(f"❌ Failed to edit entry: {e}")
-
-else:
-    st.info("No entries found. Add a tree entry first to enable editing.")
-
-
-# Export section
-if st.session_state.entries:
-    st.header("4. Export Data")
     csv_data = pd.DataFrame(st.session_state.entries).to_csv(index=False).encode("utf-8")
     st.download_button("Download CSV", csv_data, "tree_data.csv", "text/csv")
 
@@ -383,12 +227,12 @@ if st.session_state.entries:
         path = os.path.join(EXPORT_DIR, "tree_data.xlsx")
         wb = Workbook()
         ws = wb.active
-        headers = ["ID", "Tree Name", "Name", "Overall Height", "DBH", "Canopy", "Image A", "Image B", "Latitude", "Longitude"]
+        headers = ["Tree Name", "Name", "Overall Height", "DBH", "Canopy", "Image A", "Image B", "Latitude", "Longitude"]
         ws.append(headers)
         for i, entry in enumerate(st.session_state.entries, start=2):
             ws.append([entry.get(k, "") for k in headers])
-            ws.cell(row=i, column=7).value = f'=HYPERLINK("{entry.get("Image A", "")}", "View A")'
-            ws.cell(row=i, column=8).value = f'=HYPERLINK("{entry.get("Image B", "")}", "View B")'
+            ws.cell(row=i, column=6).value = f'=HYPERLINK("{entry.get("Image A", "")}", "View A")'
+            ws.cell(row=i, column=7).value = f'=HYPERLINK("{entry.get("Image B", "")}", "View B")'
         wb.save(path)
         with open(path, "rb") as f:
             st.download_button("Download Excel File", f, "tree_data.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
