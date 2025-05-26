@@ -76,7 +76,7 @@ if captured:
     st.session_state.latitude = None
     st.session_state.longitude = None
     st.session_state.location_requested = False
-    st.success("✅ QR image captured. GPS reset — please click 'Get Location' again.")
+    st.success("✅ QR image captured.")
 
 
 # Step 2: Fill Tree Details
