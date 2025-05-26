@@ -164,29 +164,52 @@ with st.form("tree_form"):
     overall_height = st.selectbox("Overall Height (m)", ["1", "2", "3", "4", "5", "6", "7"])
     dbh = st.selectbox("DBH (cm)", ["1", "2", "3", "4", "5", "6", "7", "8", "9"])
     canopy = st.text_input("Canopy Diameter (cm)")
-    tree_image_a = st.file_uploader("Upload Tree Image (Overall)", type=["jpg", "jpeg", "png"], key="tree_a")
-    tree_image_b = st.file_uploader("Upload Tree Image (Canopy)", type=["jpg", "jpeg", "png"], key="tree_b")
+
+    # Sequential camera capture for tree images
+    st.subheader("📸 Step-by-Step Tree Photo Capture")
+
+    if "tree_image_a" not in st.session_state:
+        st.session_state.tree_image_a = None
+    if "tree_image_b" not in st.session_state:
+        st.session_state.tree_image_b = None
+
+    if st.session_state.tree_image_a is None:
+        st.session_state.tree_image_a = st.camera_input("📷 Capture Tree Image A (Overall View)")
+
+    if st.session_state.tree_image_a:
+        st.success("✅ Tree Image A captured.")
+        if st.button("🔄 Retake Tree Image A"):
+            st.session_state.tree_image_a = None
+
+        if st.session_state.tree_image_b is None:
+            st.session_state.tree_image_b = st.camera_input("📷 Capture Tree Image B (Canopy View)")
+
+        if st.session_state.tree_image_b:
+            st.success("✅ Tree Image B captured.")
+            if st.button("🔄 Retake Tree Image B"):
+                st.session_state.tree_image_b = None
 
     submitted = st.form_submit_button("Add Entry")
 
     if submitted:
         if tree_custom_name in existing_tree_names:
             st.error("❌ This Tree Name already exists. Please use a different suffix.")
-        elif not all([tree_name, overall_height, dbh, canopy, tree_image_a, tree_image_b]):
+        elif not all([tree_name, overall_height, dbh, canopy, st.session_state.tree_image_a, st.session_state.tree_image_b]):
             st.error("❌ Please complete all fields.")
         elif st.session_state.latitude is None or st.session_state.longitude is None:
             st.error("❌ GPS location is missing. Please click 'Get Location' and try again.")
         else:
             safe_tree_name = re.sub(r'[^a-zA-Z0-9_-]', '_', tree_custom_name)
 
-            _, ext_a = os.path.splitext(tree_image_a.name)
+            _, ext_a = os.path.splitext("tree_a.jpg")
             filename_a = f"{safe_tree_name}_A{ext_a}"
-            image_url_a = upload_image_to_drive(tree_image_a, filename_a)
+            image_url_a = upload_image_to_drive(st.session_state.tree_image_a, filename_a)
 
-            _, ext_b = os.path.splitext(tree_image_b.name)
+            _, ext_b = os.path.splitext("tree_b.jpg")
             filename_b = f"{safe_tree_name}_B{ext_b}"
-            image_url_b = upload_image_to_drive(tree_image_b, filename_b)
-            # Upload the QR image if available
+            image_url_b = upload_image_to_drive(st.session_state.tree_image_b, filename_b)
+
+            # Upload QR image if present
             if "qr_image" in st.session_state and st.session_state.qr_image is not None:
                 qr_filename = f"GGN_25_{tree_name_suffix}_QR.jpg"
                 with open(qr_filename, "wb") as f:
@@ -218,8 +241,11 @@ with st.form("tree_form"):
             save_to_gsheet(entry)
             st.success("✅ Entry added and images saved!")
 
+            # Reset session state after submission
             st.session_state.latitude = None
             st.session_state.longitude = None
+            st.session_state.tree_image_a = None
+            st.session_state.tree_image_b = None
 
 if st.session_state.entries:
     st.header("3. Current Entries")
