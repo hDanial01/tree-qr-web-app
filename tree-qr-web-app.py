@@ -69,12 +69,15 @@ if "longitude" not in st.session_state:
 
 st.title("🌳 Tree QR Scanner")
 
-# Step 1: QR Capture
-st.header("1. Capture QR Code Photo")
+# Step 1: QR Capturest.header("1. Capture QR Code Photo")
 captured = st.camera_input("📸 Take a photo of the QR code (no scanning required)")
 if captured:
     st.session_state.qr_image = captured
-    st.success("✅ QR image captured.")
+    st.session_state.latitude = None
+    st.session_state.longitude = None
+    st.session_state.location_requested = False
+    st.success("✅ QR image captured. GPS reset — please click 'Get Location' again.")
+
 
 # Step 2: Fill Tree Details
 st.header("2. Fill Tree Details")
