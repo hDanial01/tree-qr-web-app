@@ -41,16 +41,18 @@ def load_entries_from_gsheet():
     for row in rows:
         if len(row) >= 10:
             entries.append({
-                "ID": row[0], "Tree Name": row[1], "Name": row[2],
-                "Overall Height": row[3], "DBH": row[4], "Canopy": row[5],
-                "Image A": row[6], "Image B": row[7], "Latitude": row[8], "Longitude": row[9]
+                #"ID": row[0], 
+                "Tree Name": row[0], "Name": row[1],
+                "Overall Height": row[2], "DBH": row[3], "Canopy": row[4],
+                "Image A": row[5], "Image B": row[6], "Latitude": row[7], "Longitude": row[8]
             })
     return entries
 
 def save_to_gsheet(entry):
     sheet = get_worksheet()
     sheet.append_row([
-        entry["ID"], entry["Tree Name"], entry["Name"],
+        # entry["ID"], 
+        entry["Tree Name"], entry["Name"],
         entry["Overall Height"], entry["DBH"], entry["Canopy"],
         entry["Image A"], entry["Image B"],
         entry.get("Latitude", ""), entry.get("Longitude", "")
@@ -91,7 +93,7 @@ def upload_image_to_drive(image_file, filename):
 # Session state setup
 if "entries" not in st.session_state:
     st.session_state.entries = load_entries_from_gsheet()
-    required_keys = ["ID", "Tree Name", "Name", "Overall Height", "DBH", "Canopy",
+    required_keys = ["Tree Name", "Name", "Overall Height", "DBH", "Canopy",
                      "Image A", "Image B", "Latitude", "Longitude"]
     for entry in st.session_state.entries:
         for key in required_keys:
@@ -139,7 +141,6 @@ else:
 existing_tree_names = [entry["Tree Name"] for entry in st.session_state.entries]
 
 with st.form("tree_form"):
-    id_val = st.text_input("Tree ID")
     tree_name_suffix = st.text_input("Tree Name (Suffix only)", value="1")
     tree_custom_name = f"GGN/25/{tree_name_suffix}"
     st.markdown(f"🔖 **Full Tree Name:** `{tree_custom_name}`")
@@ -211,7 +212,6 @@ with st.form("tree_form"):
 
 
             entry = {
-                "ID": id_val,
                 "Tree Name": tree_custom_name,
                 "Name": tree_name,
                 "Overall Height": overall_height,
