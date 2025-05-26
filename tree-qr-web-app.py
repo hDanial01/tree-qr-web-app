@@ -59,6 +59,7 @@ def upload_image_to_drive(image_file, filename):
     os.remove(filename)
     return f"https://drive.google.com/uc?id={file_drive['id']}"
 
+# Helper for styled headings
 def step_heading(text, size=28):
     st.markdown(f"<div style='font-size:{size}px; font-weight:bold;'>{text}</div>", unsafe_allow_html=True)
 
@@ -132,13 +133,10 @@ elif st.session_state.capture_stage == "form":
     with st.form("tree_form"):
         suffix = st.text_input("Tree Name (Suffix only)")
         tree_custom_name = f"GGN/25/{suffix}"
+        st.markdown(f"🔖 Full Tree Name: `{tree_custom_name}`")
 
-        if suffix:
-            st.markdown(f"🔖 Full Tree Name: `{tree_custom_name}`")
-            if tree_custom_name in existing_names:
-                st.error("❌ This Tree Name already exists. Please choose a different suffix.")
-            else:
-                st.success("✅ This Tree Name is available.")
+        if tree_custom_name in existing_names:
+            st.warning("⚠️ This Tree Name already exists.")
 
         tree_name = st.selectbox("Tree Species", [
             "Alstonia angustiloba", "Aquilaria malaccensis", "Azadirachta indica",
@@ -210,7 +208,7 @@ else:
     st.info("No entries added in this session yet.")
 
 # Export all data
-step_heading("⬇ Export All Data", size=24)
+step_heading("⬇Export All Data", size=24)
 full_df = pd.DataFrame(load_entries_from_gsheet())
 if not full_df.empty:
     csv_data = full_df.to_csv(index=False).encode("utf-8")
