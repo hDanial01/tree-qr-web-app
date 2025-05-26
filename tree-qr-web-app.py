@@ -59,53 +59,85 @@ def upload_image_to_drive(image_file, filename):
     os.remove(filename)
     return f"https://drive.google.com/uc?id={file_drive['id']}"
 
-# Helper for styled headings
 def step_heading(text, size=28):
     st.markdown(f"<div style='font-size:{size}px; font-weight:bold;'>{text}</div>", unsafe_allow_html=True)
 
-# Session state setup
-for key in ["qr_image", "image_a", "image_b", "latitude", "longitude", "location_requested", "capture_stage", "session_entries"]:
+# Session state initialization
+for key in ["qr_image", "image_a", "image_b", "latitude", "longitude",
+            "location_requested", "capture_stage", "session_entries",
+            "temp_qr_image", "temp_image_a", "temp_image_b"]:
     if key not in st.session_state:
-        if key == "capture_stage":
-            st.session_state[key] = "qr"
-        elif key == "session_entries":
-            st.session_state[key] = []
-        else:
-            st.session_state[key] = None
+        st.session_state[key] = None if key.startswith("temp_") else [] if key == "session_entries" else "qr" if key == "capture_stage" else None
 
 st.title("🌳 Tree Registration Flow")
 
-# Step-by-step flow
+# Step 1: QR Image
 if st.session_state.capture_stage == "qr":
     step_heading("Step 1: Capture QR Code")
-    st.info("Clear photo to continue to next phase")
-    st.info("If wrong image is captured, refresh the app")
-    qr = st.camera_input("📸 Capture QR Image")
-    if qr:
-        st.session_state.qr_image = qr
-        st.session_state.capture_stage = "image_a"
-        st.success("✅ QR image captured. Proceed to Tree Image A.")
+    st.info("Take a clear photo of the QR code. Then choose to keep or retake it.")
 
+    if st.session_state.temp_qr_image is None:
+        qr = st.camera_input("📸 Capture QR Image")
+        if qr:
+            st.session_state.temp_qr_image = qr
+    else:
+        st.image(st.session_state.temp_qr_image, caption="Captured QR Image", use_column_width=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🔄 Retake QR Image"):
+                st.session_state.temp_qr_image = None
+        with col2:
+            if st.button("✅ Keep QR Image"):
+                st.session_state.qr_image = st.session_state.temp_qr_image
+                st.session_state.temp_qr_image = None
+                st.session_state.capture_stage = "image_a"
+                st.experimental_rerun()
+
+# Step 2: Tree Image A
 elif st.session_state.capture_stage == "image_a":
     step_heading("Step 2: Capture Tree Image A (Overall)")
-    st.info("Clear photo to continue to next phase")
-    st.info("If wrong image is captured, refresh the app")
-    image_a = st.camera_input("🌳 Capture Tree Image A")
-    if image_a:
-        st.session_state.image_a = image_a
-        st.session_state.capture_stage = "image_b"
-        st.success("✅ Tree Image A captured. Proceed to Tree Image B.")
+    st.info("Take a clear photo of the full tree. Then choose to keep or retake it.")
 
+    if st.session_state.temp_image_a is None:
+        image_a = st.camera_input("🌳 Capture Tree Image A")
+        if image_a:
+            st.session_state.temp_image_a = image_a
+    else:
+        st.image(st.session_state.temp_image_a, caption="Captured Tree Image A", use_column_width=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🔄 Retake Tree Image A"):
+                st.session_state.temp_image_a = None
+        with col2:
+            if st.button("✅ Keep Tree Image A"):
+                st.session_state.image_a = st.session_state.temp_image_a
+                st.session_state.temp_image_a = None
+                st.session_state.capture_stage = "image_b"
+                st.experimental_rerun()
+
+# Step 3: Tree Image B
 elif st.session_state.capture_stage == "image_b":
     step_heading("Step 3: Capture Tree Image B (Canopy)")
-    st.info("Clear photo to continue to next phase")
-    st.info("If wrong image is captured, refresh the app")
-    image_b = st.camera_input("🍃 Capture Tree Image B")
-    if image_b:
-        st.session_state.image_b = image_b
-        st.session_state.capture_stage = "form"
-        st.success("✅ Tree Image B captured. Proceed to fill the form.")
+    st.info("Take a clear photo of the canopy. Then choose to keep or retake it.")
 
+    if st.session_state.temp_image_b is None:
+        image_b = st.camera_input("🍃 Capture Tree Image B")
+        if image_b:
+            st.session_state.temp_image_b = image_b
+    else:
+        st.image(st.session_state.temp_image_b, caption="Captured Tree Image B", use_column_width=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🔄 Retake Tree Image B"):
+                st.session_state.temp_image_b = None
+        with col2:
+            if st.button("✅ Keep Tree Image B"):
+                st.session_state.image_b = st.session_state.temp_image_b
+                st.session_state.temp_image_b = None
+                st.session_state.capture_stage = "form"
+                st.experimental_rerun()
+
+# Step 4: Fill Form
 elif st.session_state.capture_stage == "form":
     step_heading("Step 4: Fill Tree Details")
 
@@ -191,15 +223,14 @@ elif st.session_state.capture_stage == "form":
                 save_to_gsheet(entry)
                 st.session_state.session_entries.append(entry)
 
-                st.success("🎉 Tree entry saved successfully!")
-                st.markdown("<script>window.scrollTo(0, 0);</script>", unsafe_allow_html=True)
-
-                for key in ["qr_image", "image_a", "image_b", "latitude", "longitude", "location_requested"]:
+                for key in ["qr_image", "image_a", "image_b", "latitude", "longitude",
+                            "location_requested", "temp_qr_image", "temp_image_a", "temp_image_b"]:
                     st.session_state[key] = None
                 st.session_state.capture_stage = "qr"
-                st.rerun()
+                st.success("🎉 Tree entry saved successfully!")
+                st.experimental_rerun()
 
-# Show session entries only
+# Session Summary
 step_heading("Current Session Entries", size=24)
 if st.session_state.session_entries:
     df_session = pd.DataFrame(st.session_state.session_entries)
@@ -207,7 +238,7 @@ if st.session_state.session_entries:
 else:
     st.info("No entries added in this session yet.")
 
-# Export all data
+# Export Section
 step_heading("⬇Export All Data", size=24)
 full_df = pd.DataFrame(load_entries_from_gsheet())
 if not full_df.empty:
