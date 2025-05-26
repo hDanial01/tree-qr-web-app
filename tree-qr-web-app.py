@@ -10,9 +10,7 @@ from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 
 # Setup folders
-IMAGE_DIR = "tree_images"
 EXPORT_DIR = "exports"
-os.makedirs(IMAGE_DIR, exist_ok=True)
 os.makedirs(EXPORT_DIR, exist_ok=True)
 
 # Google Sheets and Drive Setup
@@ -51,7 +49,7 @@ def save_to_gsheet(entry):
         entry.get("Latitude", ""), entry.get("Longitude", "")
     ])
 
-def upload_qr_image_to_drive(image_file, filename):
+def upload_image_to_drive(image_file, filename):
     with open(filename, "wb") as f:
         f.write(image_file.getbuffer())
     file_drive = drive.CreateFile({"title": filename, "parents": [{"id": GOOGLE_DRIVE_FOLDER_ID}]})
@@ -61,28 +59,41 @@ def upload_qr_image_to_drive(image_file, filename):
     os.remove(filename)
     return f"https://drive.google.com/uc?id={file_drive['id']}"
 
-# Session state: for location & QR image
-if "latitude" not in st.session_state:
-    st.session_state.latitude = None
-if "longitude" not in st.session_state:
-    st.session_state.longitude = None
-if "location_requested" not in st.session_state:
-    st.session_state.location_requested = False
+# Session state setup
+for key in ["qr_image", "image_a", "image_b", "latitude", "longitude", "location_requested"]:
+    if key not in st.session_state:
+        st.session_state[key] = None if key != "location_requested" else False
 
 st.title("🌳 Tree QR Scanner")
 
-# Step 1: QR Capture
-st.header("1. Capture QR Code Photo")
-captured = st.camera_input("📸 Take a photo of the QR code (no scanning required)")
-if captured:
-    st.session_state.qr_image = captured
-    st.session_state.latitude = None
-    st.session_state.longitude = None
-    st.success("✅ QR image captured. GPS reset — please click 'Get Location' again.")
+# Tabs for image capture
+tabs = st.tabs(["1️⃣ QR Image", "2️⃣ Tree Image A (Overall)", "3️⃣ Tree Image B (Canopy)"])
 
-# Step 2: Fill Tree Details
-st.header("2. Fill Tree Details")
+with tabs[0]:
+    st.header("📸 Capture QR Code Image")
+    captured = st.camera_input("Take QR photo")
+    if captured:
+        st.session_state.qr_image = captured
+        st.session_state.latitude = None
+        st.session_state.longitude = None
+        st.success("✅ QR image captured. GPS reset — please capture location again.")
 
+with tabs[1]:
+    st.header("🌳 Capture Tree Image A (Overall)")
+    image_a = st.camera_input("Take Tree Image A")
+    if image_a:
+        st.session_state.image_a = image_a
+        st.success("✅ Tree Image A captured.")
+
+with tabs[2]:
+    st.header("🍃 Capture Tree Image B (Canopy)")
+    image_b = st.camera_input("Take Tree Image B")
+    if image_b:
+        st.session_state.image_b = image_b
+        st.success("✅ Tree Image B captured.")
+
+# Location Capture
+st.header("4. 📍 Capture GPS Location")
 if st.button("Get Location"):
     st.session_state.location_requested = True
 
@@ -95,13 +106,15 @@ if st.session_state.location_requested:
     else:
         st.info("📍 Waiting for browser permission or location data...")
 
-if st.session_state.latitude is not None and st.session_state.longitude is not None:
+if st.session_state.latitude and st.session_state.longitude:
     st.write(f"📍 Latitude: `{st.session_state.latitude}`")
     st.write(f"📍 Longitude: `{st.session_state.longitude}`")
 else:
-    st.info("⚠️ No coordinates yet. Click 'Get Location' to allow access.")
+    st.info("⚠️ No GPS coordinates yet. Click 'Get Location'.")
 
-# Load entries and check for duplicate names
+# Form Submission
+st.header("5. Tree Details")
+
 entries = load_entries_from_gsheet()
 existing_tree_names = [entry["Tree Name"] for entry in entries]
 
@@ -143,15 +156,16 @@ with st.form("tree_form"):
             st.error("❌ This Tree Name already exists. Please use a different suffix.")
         elif not all([tree_name, overall_height, dbh, canopy]):
             st.error("❌ Please complete all fields.")
-        elif st.session_state.latitude is None or st.session_state.longitude is None:
-            st.error("❌ GPS location is missing. Please click 'Get Location' and try again.")
+        elif not all([st.session_state.qr_image, st.session_state.image_a, st.session_state.image_b]):
+            st.error("❌ All three images (QR, Tree A, Tree B) must be captured.")
+        elif not st.session_state.latitude or not st.session_state.longitude:
+            st.error("❌ GPS location is missing. Please click 'Get Location'.")
         else:
-            if "qr_image" in st.session_state and st.session_state.qr_image is not None:
-                qr_filename = f"GGN_25_{tree_name_suffix}_QR.jpg"
-                qr_image_url = upload_qr_image_to_drive(st.session_state.qr_image, qr_filename)
-                st.success("📸 QR image uploaded to Drive.")
-            else:
-                qr_image_url = ""
+            safe_suffix = re.sub(r'\W+', '_', tree_name_suffix)
+
+            qr_url = upload_image_to_drive(st.session_state.qr_image, f"GGN_25_{safe_suffix}_QR.jpg")
+            a_url = upload_image_to_drive(st.session_state.image_a, f"GGN_25_{safe_suffix}_A.jpg")
+            b_url = upload_image_to_drive(st.session_state.image_b, f"GGN_25_{safe_suffix}_B.jpg")
 
             entry = {
                 "Tree Name": tree_custom_name,
@@ -164,21 +178,23 @@ with st.form("tree_form"):
             }
 
             save_to_gsheet(entry)
-            st.success("✅ Entry added to Google Sheet!")
-            st.info(f"📌 Tree `{tree_custom_name}` saved with GPS ({entry['Latitude']}, {entry['Longitude']}).")
+            st.success("✅ Tree entry added and images uploaded!")
 
-            # Reset GPS data to avoid reuse
+            # Reset all
+            st.session_state.qr_image = None
+            st.session_state.image_a = None
+            st.session_state.image_b = None
             st.session_state.latitude = None
             st.session_state.longitude = None
             st.session_state.location_requested = False
 
-# Step 3: Always show current entries
-st.header("3. Current Entries")
+# Live Preview
+st.header("6. Current Entries")
 df = pd.DataFrame(load_entries_from_gsheet())
 st.dataframe(df)
 
-# Step 4: Export
-st.header("4. Export Data")
+# Export
+st.header("7. Export Data")
 if not df.empty:
     csv_data = df.to_csv(index=False).encode("utf-8")
     st.download_button("Download CSV", csv_data, "tree_data.csv", "text/csv")
