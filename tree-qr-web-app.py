@@ -61,29 +61,27 @@ def upload_qr_image_to_drive(image_file, filename):
     os.remove(filename)
     return f"https://drive.google.com/uc?id={file_drive['id']}"
 
-# Session state: for location & image
+# Session state: for location & QR image
 if "latitude" not in st.session_state:
     st.session_state.latitude = None
 if "longitude" not in st.session_state:
     st.session_state.longitude = None
+if "location_requested" not in st.session_state:
+    st.session_state.location_requested = False
 
 st.title("🌳 Tree QR Scanner")
 
-# Step 1: QR Capturest.header("1. Capture QR Code Photo")
+# Step 1: QR Capture
+st.header("1. Capture QR Code Photo")
 captured = st.camera_input("📸 Take a photo of the QR code (no scanning required)")
 if captured:
     st.session_state.qr_image = captured
     st.session_state.latitude = None
     st.session_state.longitude = None
-    st.session_state.location_requested = False
-    st.success("✅ QR image captured.")
-
+    st.success("✅ QR image captured. GPS reset — please click 'Get Location' again.")
 
 # Step 2: Fill Tree Details
 st.header("2. Fill Tree Details")
-
-if "location_requested" not in st.session_state:
-    st.session_state.location_requested = False
 
 if st.button("Get Location"):
     st.session_state.location_requested = True
@@ -103,7 +101,7 @@ if st.session_state.latitude is not None and st.session_state.longitude is not N
 else:
     st.info("⚠️ No coordinates yet. Click 'Get Location' to allow access.")
 
-# Always reload current entries for duplication check and preview
+# Load entries and check for duplicate names
 entries = load_entries_from_gsheet()
 existing_tree_names = [entry["Tree Name"] for entry in entries]
 
@@ -148,15 +146,13 @@ with st.form("tree_form"):
         elif st.session_state.latitude is None or st.session_state.longitude is None:
             st.error("❌ GPS location is missing. Please click 'Get Location' and try again.")
         else:
-            # Upload QR image to Drive (if captured)
             if "qr_image" in st.session_state and st.session_state.qr_image is not None:
                 qr_filename = f"GGN_25_{tree_name_suffix}_QR.jpg"
                 qr_image_url = upload_qr_image_to_drive(st.session_state.qr_image, qr_filename)
-                st.success(f"📸 QR image uploaded to Drive.")
+                st.success("📸 QR image uploaded to Drive.")
             else:
                 qr_image_url = ""
 
-            # Save entry to Google Sheet
             entry = {
                 "Tree Name": tree_custom_name,
                 "Name": tree_name,
@@ -169,17 +165,19 @@ with st.form("tree_form"):
 
             save_to_gsheet(entry)
             st.success("✅ Entry added to Google Sheet!")
+            st.info(f"📌 Tree `{tree_custom_name}` saved with GPS ({entry['Latitude']}, {entry['Longitude']}).")
 
-            # Reset location state for next use
+            # Reset GPS data to avoid reuse
             st.session_state.latitude = None
             st.session_state.longitude = None
+            st.session_state.location_requested = False
 
-# Step 3: Always show current entries preview
+# Step 3: Always show current entries
 st.header("3. Current Entries")
 df = pd.DataFrame(load_entries_from_gsheet())
 st.dataframe(df)
 
-# Step 4: Export options
+# Step 4: Export
 st.header("4. Export Data")
 if not df.empty:
     csv_data = df.to_csv(index=False).encode("utf-8")
