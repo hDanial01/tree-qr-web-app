@@ -139,7 +139,7 @@ else:
     st.info("\u26A0\uFE0F No coordinates yet. Click 'Get Location' to allow access.")
 
 
-    existing_tree_names = [entry["Tree Name"] for entry in st.session_state.entries]
+
 
     with st.form("tree_form"):
         id_val = st.text_input("Tree ID")
