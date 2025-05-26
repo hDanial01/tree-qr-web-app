@@ -154,9 +154,7 @@ if st.session_state.latitude is not None and st.session_state.longitude is not N
 else:
     st.info("\u26A0\uFE0F No coordinates yet. Click 'Get Location' to allow access.")
 
-if st.session_state.qr_result == "":
-    st.warning("\u26A0\uFE0F Please scan a unique QR code before filling in the form.")
-else:
+
     existing_tree_names = [entry["Tree Name"] for entry in st.session_state.entries]
 
     with st.form("tree_form"):
