@@ -111,7 +111,6 @@ if captured:
     st.success("✅ QR image captured.")
 
 st.header("2. Fill Tree Details")
-st.header("📍 Capture Your GPS Location")
 
 if "location_requested" not in st.session_state:
     st.session_state.location_requested = False
