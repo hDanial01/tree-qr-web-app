@@ -136,7 +136,7 @@ else:
 existing_tree_names = [entry["Tree Name"] for entry in st.session_state.entries]
 
 with st.form("tree_form"):
-    tree_name_suffix = st.text_input("Tree Name (Suffix only)", value="1")
+    tree_name_suffix = st.text_input("Tree Name (Suffix only)")
     tree_custom_name = f"GGN/25/{tree_name_suffix}"
     st.markdown(f"🔖 **Full Tree Name:** `{tree_custom_name}`")
 
