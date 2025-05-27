@@ -24,14 +24,18 @@ GOOGLE_DRIVE_FOLDER_ID = "1iddkNU3O1U6bsoHge1m5a-DDZA_NjSVz"
 creds_dict = st.secrets["CREDS_JSON"]
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-client = gspread.authorize(creds)
 
 gauth = GoogleAuth()
 gauth.credentials = creds
 drive = GoogleDrive(gauth)
 
 def get_worksheet():
-    return client.open(SHEET_NAME).sheet1
+    scope = ["https://spreadsheets.google.com/feeds"]
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(
+        st.secrets["SHEETS_CREDS_JSON"], scope)
+    client = gspread.authorize(creds)
+    return client.open("TreeQRDatabase").sheet1
+
 
 def load_entries_from_gsheet():
     sheet = get_worksheet()
