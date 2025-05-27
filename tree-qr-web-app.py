@@ -87,17 +87,14 @@ def upload_image_to_drive(image_file, filename):
     return f"https://drive.google.com/uc?id={file_drive['id']}"
 
 # Session state setup
-if "entries" not in st.session_state:
-    st.session_state.entries = load_entries_from_gsheet()
-    required_keys = ["Tree Name", "Name", "Overall Height", "DBH", "Canopy", "Latitude", "Longitude"]
-    for entry in st.session_state.entries:
-        for key in required_keys:
-            entry.setdefault(key, "")
-
 if "latitude" not in st.session_state:
     st.session_state.latitude = None
 if "longitude" not in st.session_state:
     st.session_state.longitude = None
+if "location_requested" not in st.session_state:
+    st.session_state.location_requested = False
+if "session_entries" not in st.session_state:
+    st.session_state.session_entries = []
 
 st.title("🌳 Tree QR Scanner")
 
@@ -109,9 +106,6 @@ if captured:
 
 st.header("2. Fill Tree Details")
 st.header("📍 Capture Your GPS Location")
-
-if "location_requested" not in st.session_state:
-    st.session_state.location_requested = False
 
 if st.button("Get Location"):
     st.session_state.location_requested = True
@@ -128,15 +122,17 @@ if st.session_state.location_requested:
 if st.session_state.latitude is not None and st.session_state.longitude is not None:
     st.write(f"📍 Latitude: `{st.session_state.latitude}`")
     st.write(f"📍 Longitude: `{st.session_state.longitude}`")
+elif st.session_state.location_requested:
+    st.info("📍 Waiting for browser permission or location data...")
 else:
-    st.info("⚠️ No coordinates yet. Click 'Get Location' to allow access.")
+    st.info("⚠️ Location data cleared. Click 'Get Location' to capture new coordinates.")
 
 with st.form("tree_form"):
     tree_name_suffix = st.text_input("Tree Name (Suffix only)")
     tree_custom_name = f"GGN/25/{tree_name_suffix}"
     st.markdown(f"🔖 **Full Tree Name:** `{tree_custom_name}`")
 
-    # Load and normalize Tree Names globally
+    # Check redundancy globally from Google Sheet
     latest_entries = load_entries_from_gsheet()
     latest_tree_names = [entry["Tree Name"].strip().upper() for entry in latest_entries]
 
@@ -205,22 +201,23 @@ with st.form("tree_form"):
                 "Longitude": st.session_state.longitude
             }
 
-            st.session_state.entries.append(entry)
+            st.session_state.session_entries.append(entry)
             save_to_gsheet(entry)
             st.success("✅ Entry added and images saved!")
 
+            # Clear location and reset
             st.session_state.latitude = None
             st.session_state.longitude = None
             st.session_state.location_requested = False
 
-if st.session_state.entries:
-    st.header("3. Current Entries")
-    df = pd.DataFrame(st.session_state.entries)
+if st.session_state.session_entries:
+    st.header("3. Your Entries This Session")
+    df = pd.DataFrame(st.session_state.session_entries)
     st.dataframe(df)
 
-st.header("4. Export Data")
-if st.session_state.entries:
-    csv_data = pd.DataFrame(st.session_state.entries).to_csv(index=False).encode("utf-8")
+st.header("4. Export Your Data")
+if st.session_state.session_entries:
+    csv_data = pd.DataFrame(st.session_state.session_entries).to_csv(index=False).encode("utf-8")
     st.download_button("Download CSV", csv_data, "tree_data.csv", "text/csv")
 
     if st.button("Download Excel with Images"):
@@ -229,7 +226,7 @@ if st.session_state.entries:
         ws = wb.active
         headers = ["Tree Name", "Name", "Overall Height", "DBH", "Canopy", "Latitude", "Longitude"]
         ws.append(headers)
-        for i, entry in enumerate(st.session_state.entries, start=2):
+        for i, entry in enumerate(st.session_state.session_entries, start=2):
             ws.append([entry.get(k, "") for k in headers])
         wb.save(path)
         with open(path, "rb") as f:
