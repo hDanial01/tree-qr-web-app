@@ -38,7 +38,7 @@ def load_entries_from_gsheet():
     rows = sheet.get_all_values()[1:]
     entries = []
     for row in rows:
-        if len(row) >= 9:
+        if len(row) >= 7:
             entries.append({
                 "Tree Name": row[0], "Name": row[1],
                 "Overall Height": row[2], "DBH": row[3], "Canopy": row[4],
@@ -136,11 +136,11 @@ with st.form("tree_form"):
     tree_custom_name = f"GGN/25/{tree_name_suffix}"
     st.markdown(f"🔖 **Full Tree Name:** `{tree_custom_name}`")
 
-    # Real-time global check for existing names
+    # Load and normalize Tree Names globally
     latest_entries = load_entries_from_gsheet()
-    latest_tree_names = [entry["Tree Name"] for entry in latest_entries]
+    latest_tree_names = [entry["Tree Name"].strip().upper() for entry in latest_entries]
 
-    if tree_custom_name in latest_tree_names:
+    if tree_custom_name.strip().upper() in latest_tree_names:
         st.warning("⚠️ This Tree Name already exists in the database. Please enter a unique suffix.")
 
     tree_name = st.selectbox("Tree Name", [
@@ -168,11 +168,10 @@ with st.form("tree_form"):
     submitted = st.form_submit_button("Add Entry")
 
     if submitted:
-        # Reload for final validation
         latest_entries = load_entries_from_gsheet()
-        latest_tree_names = [entry["Tree Name"] for entry in latest_entries]
+        latest_tree_names = [entry["Tree Name"].strip().upper() for entry in latest_entries]
 
-        if tree_custom_name in latest_tree_names:
+        if tree_custom_name.strip().upper() in latest_tree_names:
             st.error("❌ This Tree Name already exists. Please use a different suffix.")
         elif not all([tree_name, overall_height, dbh, canopy]):
             st.error("❌ Please complete all fields.")
