@@ -168,7 +168,7 @@ with st.form("tree_form"):
     if submitted:
         if tree_custom_name in existing_tree_names:
             st.error("❌ This Tree Name already exists. Please use a different suffix.")
-        elif not all([tree_name, overall_height, dbh, canopy, tree_image_a, tree_image_b]):
+        elif not all([tree_name, overall_height, dbh, canopy]):
             st.error("❌ Please complete all fields.")
         elif st.session_state.latitude is None or st.session_state.longitude is None:
             st.error("❌ GPS location is missing. Please click 'Get Location' and try again.")
