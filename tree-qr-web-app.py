@@ -26,7 +26,17 @@ gauth.credentials = creds
 drive = GoogleDrive(gauth)
 
 def get_worksheet():
-    return client.open(SHEET_NAME).sheet1
+    try:
+        st.info("🔍 Attempting to open spreadsheet...")
+        spreadsheet = client.open(SHEET_NAME)
+        st.success("✅ Spreadsheet opened successfully.")
+        worksheet = spreadsheet.worksheet("Sheet1")  # Make sure "Sheet1" matches your tab name
+        st.success("✅ Worksheet loaded successfully.")
+        return worksheet
+    except Exception as e:
+        st.error(f"❌ Could not open Google Sheet: {e}")
+        raise
+
 
 def load_entries_from_gsheet():
     sheet = get_worksheet()
