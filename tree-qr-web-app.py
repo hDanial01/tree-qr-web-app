@@ -108,26 +108,15 @@ if "location_requested" not in st.session_state:
 if st.button("Get Location"):
     st.session_state.location_requested = True
 
-if st.session_state.location_requested:
-    location = get_geolocation()
-    if location:
+if st.button("Get Location"):
+    location = streamlit_js_eval(js_expressions="navigator.geolocation.getCurrentPosition", key="geo")
+    if location and "coords" in location:
         st.session_state.latitude = location["coords"]["latitude"]
         st.session_state.longitude = location["coords"]["longitude"]
         st.success("📡 Location captured!")
     else:
-        st.info("📍 Waiting for browser permission or location data...")
-
-if st.session_state.latitude is not None and st.session_state.longitude is not None:
-    st.write(f"📍 Latitude: `{st.session_state.latitude}`")
-    st.write(f"📍 Longitude: `{st.session_state.longitude}`")
-else:
-    st.info("⚠️ No coordinates yet. Click 'Get Location' to allow access.")
-
-if st.session_state.latitude is not None and st.session_state.longitude is not None:
-    st.write(f"📍 Latitude: `{st.session_state.latitude}`")
-    st.write(f"📍 Longitude: `{st.session_state.longitude}`")
-else:
-    st.info("⚠️ No coordinates yet. Click 'Get Location' to allow access.")
+        st.warning("📍 Location permission denied or data not available.")
+        st.write("DEBUG: ", location)
 
 with st.form("tree_form"):
     tree_name_suffix = st.text_input("Tree Name (Suffix only)")
@@ -156,9 +145,6 @@ with st.form("tree_form"):
     overall_height = st.selectbox("Overall Height (m)", ["1", "2", "3", "4", "5", "6", "7"])
     dbh = st.selectbox("DBH (cm)", ["1", "2", "3", "4", "5", "6", "7", "8", "9"])
     canopy = st.text_input("Canopy Diameter (cm)")
-    # tree_image_a = st.file_uploader("Upload Tree Image (Overall)", type=["jpg", "jpeg", "png"], key="tree_a")
-    # tree_image_b = st.file_uploader("Upload Tree Image (Canopy)", type=["jpg", "jpeg", "png"], key="tree_b")
-
     submitted = st.form_submit_button("Add Entry")
 
     if submitted:
@@ -174,15 +160,6 @@ with st.form("tree_form"):
             st.error("❌ GPS location is missing. Please click 'Get Location' and try again.")
         else:
             safe_tree_name = re.sub(r'[^a-zA-Z0-9_-]', '_', tree_custom_name)
-
-            # Uncomment and use image upload if desired
-            # _, ext_a = os.path.splitext(tree_image_a.name)
-            # filename_a = f"{safe_tree_name}_A{ext_a}"
-            # image_url_a = upload_image_to_drive(tree_image_a, filename_a)
-
-            # _, ext_b = os.path.splitext(tree_image_b.name)
-            # filename_b = f"{safe_tree_name}_B{ext_b}"
-            # image_url_b = upload_image_to_drive(tree_image_b, filename_b)
 
             if "qr_image" in st.session_state and st.session_state.qr_image is not None:
                 qr_filename = f"GGN_25_{tree_name_suffix}_QR.jpg"
