@@ -54,6 +54,16 @@ def save_to_gsheet(entry):
         entry.get("Latitude", ""), entry.get("Longitude", "")
     ])
 
+def delete_file_from_drive(file_url):
+    try:
+        match = re.search(r'id=([a-zA-Z0-9_-]+)', file_url)
+        if match:
+            file_id = match.group(1)
+            file_drive = drive.CreateFile({'id': file_id})
+            file_drive.Delete()
+    except Exception as e:
+        st.warning(f"Could not delete image from Drive: {e}")
+
 def upload_image_to_drive(image_file, filename):
     with open(filename, "wb") as f:
         f.write(image_file.read())
@@ -79,9 +89,10 @@ def upload_image_to_drive(image_file, filename):
 # Session state setup
 if "entries" not in st.session_state:
     st.session_state.entries = load_entries_from_gsheet()
-
-if "session_entries" not in st.session_state:
-    st.session_state.session_entries = []
+    required_keys = ["Tree Name", "Name", "Overall Height", "DBH", "Canopy", "Latitude", "Longitude"]
+    for entry in st.session_state.entries:
+        for key in required_keys:
+            entry.setdefault(key, "")
 
 if "latitude" not in st.session_state:
     st.session_state.latitude = None
@@ -91,13 +102,10 @@ if "longitude" not in st.session_state:
 st.title("🌳 Tree QR Scanner")
 
 st.header("1. Capture QR Code Photo")
-captured = st.camera_input("📸 Take a photo of the QR code")
+captured = st.camera_input("📸 Take a photo of the QR code (no scanning required)")
 if captured:
     st.session_state.qr_image = captured
-    st.session_state.latitude = None
-    st.session_state.longitude = None
-    st.session_state.location_requested = False
-    st.success("✅ QR image captured and location reset.")
+    st.success("✅ QR image captured.")
 
 st.header("2. Fill Tree Details")
 st.header("📍 Capture Your GPS Location")
@@ -108,20 +116,30 @@ if "location_requested" not in st.session_state:
 if st.button("Get Location"):
     st.session_state.location_requested = True
 
-if st.button("Get Location"):
-    location = streamlit_js_eval(js_expressions="navigator.geolocation.getCurrentPosition", key="geo")
-    if location and "coords" in location:
+if st.session_state.location_requested:
+    location = get_geolocation()
+    if location:
         st.session_state.latitude = location["coords"]["latitude"]
         st.session_state.longitude = location["coords"]["longitude"]
         st.success("📡 Location captured!")
     else:
-        st.warning("📍 Location permission denied or data not available.")
-        st.write("DEBUG: ", location)
+        st.info("📍 Waiting for browser permission or location data...")
+
+if st.session_state.latitude is not None and st.session_state.longitude is not None:
+    st.write(f"📍 Latitude: `{st.session_state.latitude}`")
+    st.write(f"📍 Longitude: `{st.session_state.longitude}`")
+else:
+    st.info("⚠️ No coordinates yet. Click 'Get Location' to allow access.")
+
+existing_tree_names = [entry["Tree Name"] for entry in st.session_state.entries]
 
 with st.form("tree_form"):
     tree_name_suffix = st.text_input("Tree Name (Suffix only)")
     tree_custom_name = f"GGN/25/{tree_name_suffix}"
     st.markdown(f"🔖 **Full Tree Name:** `{tree_custom_name}`")
+
+    if tree_custom_name in existing_tree_names:
+        st.warning("⚠️ This Tree Name already exists. Please enter a unique suffix.")
 
     tree_name = st.selectbox("Tree Name", [
         "Alstonia angustiloba", "Aquilaria malaccensis", "Azadirachta indica",
@@ -148,19 +166,16 @@ with st.form("tree_form"):
     submitted = st.form_submit_button("Add Entry")
 
     if submitted:
-        # Refresh latest entries to check for duplicates
-        latest_entries = load_entries_from_gsheet()
-        latest_tree_names = [entry["Tree Name"] for entry in latest_entries]
-
-        if tree_custom_name in latest_tree_names:
+        if tree_custom_name in existing_tree_names:
             st.error("❌ This Tree Name already exists. Please use a different suffix.")
-        elif not all([tree_name, overall_height, dbh, canopy]):
+        elif not all([tree_name, overall_height, dbh, canopy, tree_image_a, tree_image_b]):
             st.error("❌ Please complete all fields.")
         elif st.session_state.latitude is None or st.session_state.longitude is None:
             st.error("❌ GPS location is missing. Please click 'Get Location' and try again.")
         else:
             safe_tree_name = re.sub(r'[^a-zA-Z0-9_-]', '_', tree_custom_name)
 
+            # Upload the QR image if available
             if "qr_image" in st.session_state and st.session_state.qr_image is not None:
                 qr_filename = f"GGN_25_{tree_name_suffix}_QR.jpg"
                 with open(qr_filename, "wb") as f:
@@ -187,22 +202,17 @@ with st.form("tree_form"):
             }
 
             st.session_state.entries.append(entry)
-            st.session_state.session_entries.append(entry)
             save_to_gsheet(entry)
-            st.success("✅ Entry added and saved!")
+            st.success("✅ Entry added and images saved!")
 
             st.session_state.latitude = None
             st.session_state.longitude = None
 
-# Show session entries only
-st.header("3. Current Session Entries")
-if st.session_state.session_entries:
-    df_session = pd.DataFrame(st.session_state.session_entries)
-    st.dataframe(df_session)
-else:
-    st.info("No entries added in this session yet.")
+if st.session_state.entries:
+    st.header("3. Current Entries")
+    df = pd.DataFrame(st.session_state.entries)
+    st.dataframe(df)
 
-# Export full data
 st.header("4. Export Data")
 if st.session_state.entries:
     csv_data = pd.DataFrame(st.session_state.entries).to_csv(index=False).encode("utf-8")
@@ -214,8 +224,8 @@ if st.session_state.entries:
         ws = wb.active
         headers = ["Tree Name", "Name", "Overall Height", "DBH", "Canopy", "Latitude", "Longitude"]
         ws.append(headers)
-        for entry in st.session_state.entries:
-            ws.append([entry.get(col, "") for col in headers])
+        for i, entry in enumerate(st.session_state.entries, start=2):
+            ws.append([entry.get(k, "") for k in headers])
         wb.save(path)
         with open(path, "rb") as f:
             st.download_button("Download Excel File", f, "tree_data.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
