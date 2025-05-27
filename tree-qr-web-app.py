@@ -131,15 +131,17 @@ if st.session_state.latitude is not None and st.session_state.longitude is not N
 else:
     st.info("⚠️ No coordinates yet. Click 'Get Location' to allow access.")
 
-existing_tree_names = [entry["Tree Name"] for entry in st.session_state.entries]
-
 with st.form("tree_form"):
     tree_name_suffix = st.text_input("Tree Name (Suffix only)")
     tree_custom_name = f"GGN/25/{tree_name_suffix}"
     st.markdown(f"🔖 **Full Tree Name:** `{tree_custom_name}`")
 
-    if tree_custom_name in existing_tree_names:
-        st.warning("⚠️ This Tree Name already exists. Please enter a unique suffix.")
+    # Real-time global check for existing names
+    latest_entries = load_entries_from_gsheet()
+    latest_tree_names = [entry["Tree Name"] for entry in latest_entries]
+
+    if tree_custom_name in latest_tree_names:
+        st.warning("⚠️ This Tree Name already exists in the database. Please enter a unique suffix.")
 
     tree_name = st.selectbox("Tree Name", [
         "Alstonia angustiloba", "Aquilaria malaccensis", "Azadirachta indica",
@@ -166,7 +168,11 @@ with st.form("tree_form"):
     submitted = st.form_submit_button("Add Entry")
 
     if submitted:
-        if tree_custom_name in existing_tree_names:
+        # Reload for final validation
+        latest_entries = load_entries_from_gsheet()
+        latest_tree_names = [entry["Tree Name"] for entry in latest_entries]
+
+        if tree_custom_name in latest_tree_names:
             st.error("❌ This Tree Name already exists. Please use a different suffix.")
         elif not all([tree_name, overall_height, dbh, canopy]):
             st.error("❌ Please complete all fields.")
@@ -175,7 +181,6 @@ with st.form("tree_form"):
         else:
             safe_tree_name = re.sub(r'[^a-zA-Z0-9_-]', '_', tree_custom_name)
 
-            # Upload the QR image if available
             if "qr_image" in st.session_state and st.session_state.qr_image is not None:
                 qr_filename = f"GGN_25_{tree_name_suffix}_QR.jpg"
                 with open(qr_filename, "wb") as f:
