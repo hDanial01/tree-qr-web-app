@@ -103,27 +103,9 @@ st.title("🌳 Tree QR Scanner")
 
 st.header("1. Capture QR Code Photo")
 captured = st.camera_input("📸 Take a photo of the QR code (no scanning required)")
-
 if captured:
     st.session_state.qr_image = captured
-    st.session_state.latitude = None
-    st.session_state.longitude = None
-    st.session_state.location_requested = True  # Auto-trigger location fetch
-    st.success("✅ QR image captured. Fetching new GPS location...")
-
-# Auto-trigger location after capture
-if st.session_state.get("location_requested"):
-    with st.spinner("📍 Getting your current location..."):
-        location = get_geolocation()
-        if location:
-            st.session_state.latitude = location["coords"]["latitude"]
-            st.session_state.longitude = location["coords"]["longitude"]
-            st.session_state.location_requested = False  # Reset flag
-            st.success("📡 Location captured!")
-        else:
-            st.info("📍 Waiting for browser permission or GPS fix...")
-
-
+    st.success("✅ QR image captured.")
 
 st.header("2. Fill Tree Details")
 st.header("📍 Capture Your GPS Location")
