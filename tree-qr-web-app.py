@@ -105,7 +105,11 @@ st.header("1. Capture QR Code Photo")
 captured = st.camera_input("📸 Take a photo of the QR code (no scanning required)")
 if captured:
     st.session_state.qr_image = captured
+    st.session_state.latitude = None
+    st.session_state.longitude = None
+    st.session_state.location_requested = False  # Reset location fetch state
     st.success("✅ QR image captured.")
+
 
 st.header("2. Fill Tree Details")
 st.header("📍 Capture Your GPS Location")
