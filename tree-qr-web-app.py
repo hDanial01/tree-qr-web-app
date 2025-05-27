@@ -54,16 +54,6 @@ def save_to_gsheet(entry):
         entry.get("Latitude", ""), entry.get("Longitude", "")
     ])
 
-def delete_file_from_drive(file_url):
-    try:
-        match = re.search(r'id=([a-zA-Z0-9_-]+)', file_url)
-        if match:
-            file_id = match.group(1)
-            file_drive = drive.CreateFile({'id': file_id})
-            file_drive.Delete()
-    except Exception as e:
-        st.warning(f"Could not delete image from Drive: {e}")
-
 def upload_image_to_drive(image_file, filename):
     with open(filename, "wb") as f:
         f.write(image_file.read())
@@ -87,26 +77,21 @@ def upload_image_to_drive(image_file, filename):
     return f"https://drive.google.com/uc?id={file_drive['id']}"
 
 # Session state setup
-if "latitude" not in st.session_state:
-    st.session_state.latitude = None
-if "longitude" not in st.session_state:
-    st.session_state.longitude = None
-if "location_requested" not in st.session_state:
-    st.session_state.location_requested = False
-if "session_entries" not in st.session_state:
-    st.session_state.session_entries = []
+for key in ["latitude", "longitude", "location_requested", "session_entries", "qr_image"]:
+    if key not in st.session_state:
+        st.session_state[key] = None if key != "session_entries" else []
 
 st.title("🌳 Tree QR Scanner")
 
+# 1. QR Capture
 st.header("1. Capture QR Code Photo")
 captured = st.camera_input("📸 Take a photo of the QR code (no scanning required)")
 if captured:
     st.session_state.qr_image = captured
     st.success("✅ QR image captured.")
 
-st.header("2. Fill Tree Details")
-st.header("📍 Capture Your GPS Location")
-
+# 2. GPS Capture
+st.header("2. Capture GPS Location")
 if st.button("Get Location"):
     st.session_state.location_requested = True
 
@@ -125,19 +110,14 @@ if st.session_state.latitude is not None and st.session_state.longitude is not N
 elif st.session_state.location_requested:
     st.info("📍 Waiting for browser permission or location data...")
 else:
-    st.info("⚠️ Location data cleared. Click 'Get Location' to capture new coordinates.")
+    st.info("⚠️ Click 'Get Location' to capture coordinates.")
 
+# 3. Tree Data Form (Isolated & Stable)
+st.header("3. Fill Tree Details")
 with st.form("tree_form"):
     tree_name_suffix = st.text_input("Tree Name (Suffix only)")
     tree_custom_name = f"GGN/25/{tree_name_suffix}"
     st.markdown(f"🔖 **Full Tree Name:** `{tree_custom_name}`")
-
-    # Check redundancy globally from Google Sheet
-    latest_entries = load_entries_from_gsheet()
-    latest_tree_names = [entry["Tree Name"].strip().upper() for entry in latest_entries]
-
-    if tree_custom_name.strip().upper() in latest_tree_names:
-        st.warning("⚠️ This Tree Name already exists in the database. Please enter a unique suffix.")
 
     tree_name = st.selectbox("Tree Name", [
         "Alstonia angustiloba", "Aquilaria malaccensis", "Azadirachta indica",
@@ -145,88 +125,86 @@ with st.form("tree_form"):
         "Cerbera odollam rubra", "Cinnamomum iners", "Coccoloba uvifera",
         "Cratoxylum chochinchinensis", "Cratoxylum cochichinensis", "Cratoxylum formosum",
         "Dillenia indica", "Diospyros blancoi", "Diptercarpus baudi", "Diptercarpus gracilis",
-        "Dyera costulata", "Eleocarpus grandiflorus", "Ficus lyrate",
+        "Dyera costulata", "Eleocarpus grandiflorus", "Ficus lyrata",
         "Filicium decipiens", "Garcinia hombroniana", "Gardenia carinata",
         "Heteropanax fragrans", "Hopea ferrea", "Hopea odorata",
         "Leptospermum brachyandrum", "Licuala grandis", "Maniltoa browneoides",
-        "Mesua ferrea", "Michelia champaka", "Milingtonia hortensis",
-        "Millettia pinnata", "Mimusops elengi", "Pentaspadon monteylii",
+        "Mesua ferrea", "Michelia champaka", "Millingtonia hortensis",
+        "Millettia pinnata", "Mimusops elengi", "Pentaspadon motleyi",
         "Podocarpus macrophyllus", "Podocarpus polystachyus", "Pometia pinnata",
         "Saraca thaipingensis", "Shorea roxburghii", "Spathodea campanulata",
-        "Sterculia foetida", "Sterculia paviflora", "Sygzium polyanthum",
-        "Syzgium grande", "Syzgium spicata", "Tabebuia argentea",
+        "Sterculia foetida", "Sterculia parviflora", "Syzygium polyanthum",
+        "Syzygium grande", "Syzygium spicata", "Tabebuia argentea",
         "Tabebuia rosea", "Terminalia calamansanai", "Terminalia catappa",
         "Tristania obovata", "Tristaniopsis whiteana", "Unknown sp", "Mixed sp"
     ])
     overall_height = st.selectbox("Overall Height (m)", ["1", "2", "3", "4", "5", "6", "7"])
     dbh = st.selectbox("DBH (cm)", ["1", "2", "3", "4", "5", "6", "7", "8", "9"])
     canopy = st.text_input("Canopy Diameter (cm)")
+
     submitted = st.form_submit_button("Add Entry")
 
-    if submitted:
-        latest_entries = load_entries_from_gsheet()
-        latest_tree_names = [entry["Tree Name"].strip().upper() for entry in latest_entries]
+if submitted:
+    latest_entries = load_entries_from_gsheet()
+    latest_tree_names = [entry["Tree Name"].strip().upper() for entry in latest_entries]
 
-        if tree_custom_name.strip().upper() in latest_tree_names:
-            st.error("❌ This Tree Name already exists. Please use a different suffix.")
-        elif not all([tree_name, overall_height, dbh, canopy]):
-            st.error("❌ Please complete all fields.")
-        elif st.session_state.latitude is None or st.session_state.longitude is None:
-            st.error("❌ GPS location is missing. Please click 'Get Location' and try again.")
-        else:
-            safe_tree_name = re.sub(r'[^a-zA-Z0-9_-]', '_', tree_custom_name)
+    if tree_custom_name.strip().upper() in latest_tree_names:
+        st.error("❌ This Tree Name already exists. Please use a different suffix.")
+    elif not all([tree_name, overall_height, dbh, canopy]):
+        st.error("❌ Please complete all fields.")
+    elif st.session_state.latitude is None or st.session_state.longitude is None:
+        st.error("❌ GPS location is missing. Please click 'Get Location' and try again.")
+    else:
+        qr_filename = f"GGN_25_{tree_name_suffix}_QR.jpg"
+        if st.session_state.qr_image:
+            with open(qr_filename, "wb") as f:
+                f.write(st.session_state.qr_image.getbuffer())
+            file_drive = drive.CreateFile({"title": qr_filename, "parents": [{"id": GOOGLE_DRIVE_FOLDER_ID}]})
+            file_drive.SetContentFile(qr_filename)
+            file_drive.Upload()
+            file_drive.InsertPermission({
+                'type': 'anyone',
+                'value': 'anyone',
+                'role': 'reader'
+            })
+            os.remove(qr_filename)
+            st.success(f"📸 QR image saved as `{qr_filename}`")
 
-            if "qr_image" in st.session_state and st.session_state.qr_image is not None:
-                qr_filename = f"GGN_25_{tree_name_suffix}_QR.jpg"
-                with open(qr_filename, "wb") as f:
-                    f.write(st.session_state.qr_image.getbuffer())
-                file_drive = drive.CreateFile({"title": qr_filename, "parents": [{"id": GOOGLE_DRIVE_FOLDER_ID}]})
-                file_drive.SetContentFile(qr_filename)
-                file_drive.Upload()
-                file_drive.InsertPermission({
-                    'type': 'anyone',
-                    'value': 'anyone',
-                    'role': 'reader'
-                })
-                os.remove(qr_filename)
-                st.success(f"📸 QR image saved as `{qr_filename}`")
+        entry = {
+            "Tree Name": tree_custom_name,
+            "Name": tree_name,
+            "Overall Height": overall_height,
+            "DBH": dbh,
+            "Canopy": canopy,
+            "Latitude": st.session_state.latitude,
+            "Longitude": st.session_state.longitude
+        }
+        st.session_state.session_entries.append(entry)
+        save_to_gsheet(entry)
+        st.success("✅ Entry added and images saved!")
 
-            entry = {
-                "Tree Name": tree_custom_name,
-                "Name": tree_name,
-                "Overall Height": overall_height,
-                "DBH": dbh,
-                "Canopy": canopy,
-                "Latitude": st.session_state.latitude,
-                "Longitude": st.session_state.longitude
-            }
+        # Reset state
+        st.session_state.latitude = None
+        st.session_state.longitude = None
+        st.session_state.location_requested = False
+        st.session_state.qr_image = None
 
-            st.session_state.session_entries.append(entry)
-            save_to_gsheet(entry)
-            st.success("✅ Entry added and images saved!")
-
-            # Clear location and reset
-            st.session_state.latitude = None
-            st.session_state.longitude = None
-            st.session_state.location_requested = False
-
+# 4. Show Session Data
 if st.session_state.session_entries:
-    st.header("3. Your Entries This Session")
+    st.header("4. Your Entries This Session")
     df = pd.DataFrame(st.session_state.session_entries)
     st.dataframe(df)
 
-st.header("4. Export Your Data")
-if st.session_state.session_entries:
-    csv_data = pd.DataFrame(st.session_state.session_entries).to_csv(index=False).encode("utf-8")
-    st.download_button("Download CSV", csv_data, "tree_data.csv", "text/csv")
+    csv_data = df.to_csv(index=False).encode("utf-8")
+    st.download_button("📥 Download CSV", csv_data, "tree_data.csv", "text/csv")
 
-    if st.button("Download Excel with Images"):
+    if st.button("📥 Download Excel with Images"):
         path = os.path.join(EXPORT_DIR, "tree_data.xlsx")
         wb = Workbook()
         ws = wb.active
         headers = ["Tree Name", "Name", "Overall Height", "DBH", "Canopy", "Latitude", "Longitude"]
         ws.append(headers)
-        for i, entry in enumerate(st.session_state.session_entries, start=2):
+        for entry in st.session_state.session_entries:
             ws.append([entry.get(k, "") for k in headers])
         wb.save(path)
         with open(path, "rb") as f:
