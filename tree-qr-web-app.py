@@ -211,6 +211,7 @@ with st.form("tree_form"):
 
             st.session_state.latitude = None
             st.session_state.longitude = None
+            st.session_state.location_requested = False
 
 if st.session_state.entries:
     st.header("3. Current Entries")
