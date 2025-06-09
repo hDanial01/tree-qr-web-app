@@ -121,23 +121,31 @@ with st.form("tree_form"):
 
     tree_name = st.selectbox("Tree Name", [
         "Alstonia angustiloba", "Aquilaria malaccensis", "Azadirachta indica",
-        "Baringtonia acutangula", "Buchanania arborescens", "Callophyllum inophyllum",
+        "Baringtonia acutangula", "Baeckea frutescens", "Buchanania arborescens",
+        "Buchanania sessifolia", "Callophyllum inophyllum", "Caesalpinia ferrea",
         "Cerbera odollam rubra", "Cinnamomum iners", "Coccoloba uvifera",
-        "Cratoxylum chochinchinensis", "Cratoxylum cochichinensis", "Cratoxylum formosum",
-        "Dillenia indica", "Diospyros blancoi", "Diptercarpus baudi", "Diptercarpus gracilis",
+        "Cratoxylum cochinchinensis", "Cratoxylum formosum", "Cratoxylum chochinchinensis",
+        "Dalbergia latifolia", "Dillenia indica", "Dillenia suffruticosa",
+        "Diospyros blancoi", "Diospyros buxifolia", "Diospyros discolor",
+        "Dipterocarpus alatus", "Dipterocarpus baudi", "Dipterocarpus gracilis",
         "Dyera costulata", "Eleocarpus grandiflorus", "Ficus lyrata",
-        "Filicium decipiens", "Garcinia hombroniana", "Gardenia carinata",
-        "Heteropanax fragrans", "Hopea ferrea", "Hopea odorata",
+        "Ficus microcarpa", "Filicium decipiens", "Garcinia hombroniana",
+        "Garcinia xanthochymus", "Gardenia carinata", "Gymnostoma rumphianum",
+        "Heteropanax fragrans", "Hibiscus tiliaceus rubra", "Hopea ferrea",
+        "Hopea odorata", "Lagestromia indica", "Lagestromia speciosa",
         "Leptospermum brachyandrum", "Licuala grandis", "Maniltoa browneoides",
-        "Mesua ferrea", "Michelia champaka", "Millingtonia hortensis",
-        "Millettia pinnata", "Mimusops elengi", "Pentaspadon motleyi",
-        "Podocarpus macrophyllus", "Podocarpus polystachyus", "Pometia pinnata",
+        "Melaleuca cajuputi", "Memecylon caeruleum", "Mesua ferrea",
+        "Michelia champaka", "Millingtonia hortensis", "Millettia pinnata",
+        "Mimusops elengi", "Ormosia pinnata", "Pentaspadon motleyi",
+        "Planchonella obovata", "Podocarpus macrophyllus", "Podocarpus polystachyus",
+        "Podocarpus rumphii", "Pometia pinnata", "Samanea saman",
         "Saraca thaipingensis", "Shorea roxburghii", "Spathodea campanulata",
-        "Sterculia foetida", "Sterculia parviflora", "Syzygium polyanthum",
-        "Syzygium grande", "Syzygium spicata", "Tabebuia argentea",
+        "Sterculia foetida", "Sterculia paviflora", "Syzygium grande",
+        "Syzygium polyanthum", "Syzygium spicata", "Tabebuia argentea",
         "Tabebuia rosea", "Terminalia calamansanai", "Terminalia catappa",
         "Tristania obovata", "Tristaniopsis whiteana", "Unknown sp", "Mixed sp"
     ])
+
     overall_height = st.selectbox("Overall Height (m)", ["1", "2", "3", "4", "5", "6", "7"])
     dbh = st.selectbox("DBH (cm)", ["1", "2", "3", "4", "5", "6", "7", "8", "9"])
     canopy = st.text_input("Canopy Diameter (cm)")
