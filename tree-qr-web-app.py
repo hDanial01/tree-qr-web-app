@@ -133,7 +133,7 @@ with st.form("tree_form"):
         "Garcinia xanthochymus", "Gardenia carinata", "Gymnostoma rumphianum",
         "Heteropanax fragrans", "Hibiscus tiliaceus rubra", "Hopea ferrea",
         "Hopea odorata", "Lagestromia indica", "Lagestromia speciosa",
-        "Leptospermum brachyandrum", "Licuala grandis", "Maniltoa browneoides",
+        "Leptospermum brachyandrum", "Libidibia Ferrea", "Licuala grandis", "Maniltoa browneoides",
         "Melaleuca cajuputi", "Memecylon caeruleum", "Mesua ferrea",
         "Michelia champaka", "Millingtonia hortensis", "Millettia pinnata",
         "Mimusops elengi", "Ormosia pinnata", "Pentaspadon motleyi",
